@@ -127,3 +127,16 @@
     @apply font-sans;
     }
 }
+
+@keyframes grid {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(calc(var(--cell-size)));
+  }
+}
+
+@utility animate-grid {
+  animation: grid 15s linear infinite;
+}
