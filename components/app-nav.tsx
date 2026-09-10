@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Search, Lock, Unlock, LogOut } from "lucide-react";
+import { Calendar, Search, Lock, Unlock, LogOut, BarChart3 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { AdminLoginModal } from "./auth/admin-login-modal";
 
@@ -14,6 +14,7 @@ export function AppNav() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const isTimeline = pathname === "/";
+  const isAnalytics = pathname === "/analytics";
   const isSearch = pathname === "/search";
 
   return (
@@ -56,19 +57,33 @@ export function AppNav() {
                 <span className="inline xs:hidden sm:hidden">Timeline</span>
               </Link>
 
-              {/* คลังคำถามและคู่มือ (ปิดการแสดงผลชั่วคราวตามนโยบายความปลอดภัยข้อมูล) */}
-              {/* <Link
-                href="/search"
-                className={`inline-flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all ${
-                  isSearch
-                    ? "bg-red-50 text-[#ED1C24] border border-red-200 shadow-2xs"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                }`}
-              >
-                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                <span className="hidden xs:inline sm:inline">คลังคำถาม (Search)</span>
-                <span className="inline xs:hidden sm:hidden">Search</span>
-              </Link> */}
+              {/* สรุปสถิติ & สรุปภาพรวม (Admin Analytics) */}
+              {isAdmin ? (
+                <Link
+                  href="/analytics"
+                  className={`inline-flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all ${
+                    isAnalytics
+                      ? "bg-red-50 text-[#ED1C24] border border-red-200 shadow-2xs"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-[#ED1C24]" />
+                  <span className="hidden xs:inline sm:inline">สรุปสถิติ (Analytics)</span>
+                  <span className="inline xs:hidden sm:hidden">สถิติ</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-all"
+                  title="เข้าสู่ระบบ Admin เพื่อดูสรุปสถิติโครงการ"
+                >
+                  <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-gray-400" />
+                  <span className="hidden xs:inline sm:inline">สรุปสถิติ (Admin)</span>
+                  <span className="inline xs:hidden sm:hidden">สถิติ</span>
+                  <Lock className="w-3 h-3 text-gray-400 shrink-0" />
+                </button>
+              )}
             </nav>
 
             {/* Admin Lock / Status */}

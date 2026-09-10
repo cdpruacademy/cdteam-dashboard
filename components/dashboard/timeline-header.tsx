@@ -45,8 +45,6 @@ interface TimelineHeaderProps {
   isAdmin?: boolean;
   isCloudConnected?: boolean;
   isSyncing?: boolean;
-  showAnalytics?: boolean;
-  onToggleAnalytics?: () => void;
 }
 
 export function TimelineHeader({
@@ -68,8 +66,6 @@ export function TimelineHeader({
   isAdmin = false,
   isCloudConnected = false,
   isSyncing = false,
-  showAnalytics = true,
-  onToggleAnalytics,
 }: TimelineHeaderProps) {
   const [isEditingAsOf, setIsEditingAsOf] = useState(false);
   const [tempAsOf, setTempAsOf] = useState(asOfText);
@@ -335,23 +331,6 @@ export function TimelineHeader({
 
           {/* ALL ACTION BUTTONS (COMPLETELY HIDDEN ON EXPORT) */}
           <div className="export-hide flex flex-wrap items-center gap-1 sm:gap-2">
-
-            {/* Analytics Dashboard Toggle (Admin only) */}
-            {isAdmin && onToggleAnalytics && (
-              <button
-                type="button"
-                onClick={onToggleAnalytics}
-                title="เปิด/ปิด แผงวิเคราะห์สถิติและภาระงานทีม"
-                className={`inline-flex items-center gap-1 px-2.5 py-2 text-xs font-semibold rounded-lg border transition-all ${
-                  showAnalytics
-                    ? "bg-red-50 border-red-200 text-[#ED1C24] shadow-2xs font-bold"
-                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 shadow-2xs"
-                }`}
-              >
-                <BarChart3 className="w-3.5 h-3.5 text-[#ED1C24]" />
-                <span className="hidden lg:inline">สถิติ</span>
-              </button>
-            )}
 
             {/* Color Customizer Button (Admin only) */}
             {isAdmin && (

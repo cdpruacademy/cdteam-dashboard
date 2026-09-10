@@ -9,8 +9,6 @@ import { TimelineHeader, TimelineTrackHeader } from "./timeline-header";
 import { TimelineRow } from "./timeline-row";
 import { ProductFormModal } from "./product-form-modal";
 import { BrokerColorModal } from "./broker-color-modal";
-import { AdminAnalyticsPanel } from "./admin-analytics-panel";
-import { TeamManagementModal } from "./team-management-modal";
 import { useTeamMembers } from "@/hooks/use-team-members";
 import { toPng } from "html-to-image";
 import { Plus, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
@@ -61,9 +59,6 @@ export function ProductTimeline() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isColorModalOpen, setIsColorModalOpen] = useState(false);
-  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(true);
-  const [selectedMemberFilter, setSelectedMemberFilter] = useState<string | null>(null);
   const [productToEdit, setProductToEdit] = useState<ProductItem | null>(null);
   const [isExportingAll, setIsExportingAll] = useState(false);
 
@@ -152,17 +147,6 @@ export function ProductTimeline() {
     }
   };
 
-  // Filter items by selected team member (if active)
-  const filteredItems = React.useMemo(() => {
-    if (!selectedMemberFilter) return currentItems;
-    const query = selectedMemberFilter.toLowerCase();
-    const shortName = query.split(" ")[0];
-    return currentItems.filter((item) => {
-      const resp = (item.owner || "").toLowerCase();
-      return resp.includes(query) || resp.includes(shortName);
-    });
-  }, [currentItems, selectedMemberFilter]);
-
   return (
     <div className="w-full max-w-[1440px] mx-auto py-2 sm:py-4 px-2 sm:px-6">
       {/* Main Container Card */}
@@ -190,25 +174,7 @@ export function ProductTimeline() {
           isAdmin={isAdmin}
           isCloudConnected={isCloudConnected}
           isSyncing={isSyncing}
-          showAnalytics={showAnalytics}
-          onToggleAnalytics={() => setShowAnalytics((prev) => !prev)}
         />
-
-        {/* Admin Executive Summary & Analytics (Admin Only) */}
-        {isAdmin && showAnalytics && (
-          <AdminAnalyticsPanel
-            items={currentItems}
-            timelineType={timelineType}
-            selectedMonth={selectedMonth}
-            teamMembers={teamMembers}
-            selectedMemberFilter={selectedMemberFilter}
-            onSelectMemberFilter={setSelectedMemberFilter}
-            onOpenTeamModal={() => setIsTeamModalOpen(true)}
-            customColorMap={colorMap}
-            productCount={monthlyStore[selectedMonth]?.products?.length || 0}
-            enhancementCount={monthlyStore[selectedMonth]?.enhancements?.length || 0}
-          />
-        )}
 
         {/* Timeline Table Area with Unified Horizontal Scroll */}
         <div className="overflow-x-auto pb-4 mt-2">
@@ -259,26 +225,8 @@ export function ProductTimeline() {
                   </button>
                 ) : null}
               </div>
-            ) : filteredItems.length === 0 ? (
-              /* Notice when filter has no matches */
-              <div className="text-center py-12 bg-slate-50/80 border border-dashed border-slate-200 rounded-xl my-3 space-y-2">
-                <AlertCircle className="w-8 h-8 text-gray-400 mx-auto" />
-                <p className="text-xs font-bold text-gray-800">
-                  ไม่พบงานที่ระบุผู้รับผิดชอบ "{selectedMemberFilter}" ในรอบเดือน {selectedMonth}
-                </p>
-                <p className="text-[11px] text-gray-500">
-                  รอบเดือนนี้มีงานทั้งหมด {currentItems.length} รายการ
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setSelectedMemberFilter(null)}
-                  className="px-3.5 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-50 shadow-2xs transition-colors"
-                >
-                  แสดงงานทั้งหมด ({currentItems.length})
-                </button>
-              </div>
             ) : (
-              filteredItems.map((item) => (
+              currentItems.map((item) => (
                 <TimelineRow
                   key={item.id}
                   product={item}
@@ -330,17 +278,6 @@ export function ProductTimeline() {
         onColorChange={handleColorChange}
         onResetColors={handleResetColors}
         currentColors={colorMap}
-      />
-
-      {/* Team Member Management Modal (Admin only) */}
-      <TeamManagementModal
-        isOpen={isTeamModalOpen}
-        onClose={() => setIsTeamModalOpen(false)}
-        teamMembers={teamMembers}
-        onAddMember={addMember}
-        onUpdateMember={updateMember}
-        onDeleteMember={deleteMember}
-        onResetToDefault={resetTeamMembers}
       />
     </div>
   );
