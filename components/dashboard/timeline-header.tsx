@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { useState } from "react";
@@ -24,6 +24,7 @@ import {
   Clock,
   History,
 } from "lucide-react";
+import { CloudStatusBadge } from "./cloud-status-badge";
 
 interface TimelineHeaderProps {
   timelineType: TimelineType;
@@ -43,6 +44,9 @@ interface TimelineHeaderProps {
   onResetClick: () => void;
   isExporting?: boolean;
   isAdmin?: boolean;
+  isCloudConnected?: boolean;
+  isSyncing?: boolean;
+  onOpenCloudModal?: () => void;
 }
 
 export function TimelineHeader({
@@ -63,6 +67,9 @@ export function TimelineHeader({
   onResetClick,
   isExporting = false,
   isAdmin = false,
+  isCloudConnected = false,
+  isSyncing = false,
+  onOpenCloudModal,
 }: TimelineHeaderProps) {
   const [isEditingAsOf, setIsEditingAsOf] = useState(false);
   const [tempAsOf, setTempAsOf] = useState(asOfText);
@@ -340,6 +347,14 @@ export function TimelineHeader({
 
           {/* ALL ACTION BUTTONS (COMPLETELY HIDDEN ON EXPORT) */}
           <div className="export-hide flex items-center gap-1.5 sm:gap-2">
+            {/* Cloud Status Badge */}
+            <CloudStatusBadge
+              isCloudConnected={isCloudConnected}
+              isSyncing={isSyncing}
+              onClick={onOpenCloudModal}
+              isAdmin={isAdmin}
+            />
+
             {/* Color Customizer Button (Admin only) */}
             {isAdmin && (
               <button

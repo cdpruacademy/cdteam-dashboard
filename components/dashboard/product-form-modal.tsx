@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { useState, useEffect } from "react";
@@ -165,6 +165,16 @@ export function ProductFormModal({
     setIsSubmitting(false);
   }, [productToEdit, isOpen, isEnhancement]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -180,20 +190,19 @@ export function ProductFormModal({
 
     setIsSubmitting(true);
     try {
-      const builtMilestones: Partial<Record<PhaseKey, any>> = {};
+      const finalBroker = broker === "Other" ? (customBroker.trim() || "Other") : broker;
+
+      const builtMilestones: Record<string, any> = {};
       PHASES.forEach((p) => {
-        const ms = milestonesState[p.key];
-        if (ms && ms.enabled) {
+        const state = milestonesState[p.key];
+        if (state.enabled) {
           builtMilestones[p.key] = {
-            phase: p.key,
-            date: ms.date.trim() || undefined,
-            status: ms.status,
-            isElearningIcon: ms.isElearningIcon,
+            date: state.date.trim() || undefined,
+            status: state.status,
+            isElearningIcon: state.isElearningIcon || undefined,
           };
         }
       });
-
-      const finalBroker = broker === "Other" ? (customBroker.trim() || "Other") : broker;
 
       const payload: Omit<ProductItem, "id"> = {
         broker: finalBroker,
@@ -226,55 +235,62 @@ export function ProductFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-xs">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        transition={{ duration: 0.2 }}
-        className="w-full max-w-3xl my-auto"
-      >
-        <Card className="border border-gray-200 shadow-2xl bg-white max-h-[92vh] flex flex-col">
-          {/* Header */}
-          <CardHeader className="pb-4 border-b border-gray-100 shrink-0 bg-gray-50/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  style={{ backgroundColor: isEnhancement ? "#0066CC" : "#ED1C24" }}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xs"
-                >
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg font-bold text-gray-900">
-                      {productToEdit ? "แก้ไขข้อมูลรายการ" : "เพิ่มรายการใหม่"}
-                    </CardTitle>
-                    <Badge variant={isEnhancement ? "secondary" : "default"}>
-                      {isEnhancement ? "Enhancement" : "New Product"}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs text-gray-600">
-                      {selectedMonth}
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-xs text-gray-500 mt-0.5">
-                    กรอกข้อมูลกำหนดการและ Milestone เพื่อแสดงผลบน Dashboard ของทีม
-                  </CardDescription>
-                </div>
-              </div>
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      {/* Soft translucent backdrop for desktop (no blur so timeline remains readable) */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-950/20 sm:bg-slate-950/25 transition-opacity duration-200"
+        aria-hidden="true"
+      />
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+      {/* Right-docked slide-over container */}
+      <div className="fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-10">
+        <motion.div
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", damping: 28, stiffness: 280 }}
+          className="w-screen max-w-full sm:max-w-xl lg:max-w-[620px] h-full bg-white shadow-2xl flex flex-col border-l border-gray-200"
+        >
+          {/* Sticky Header */}
+          <div className="shrink-0 px-4 py-3.5 sm:px-6 sm:py-4 border-b border-gray-100 bg-white/95 backdrop-blur-xs flex items-center justify-between z-10">
+            <div className="flex items-center gap-3">
+              <div
+                style={{ backgroundColor: isEnhancement ? "#0066CC" : "#ED1C24" }}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
               >
-                <X className="w-5 h-5" />
-              </button>
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-tight">
+                    {productToEdit ? "แก้ไขข้อมูลรายการ" : "เพิ่มรายการใหม่"}
+                  </h2>
+                  <Badge variant={isEnhancement ? "secondary" : "default"} className="text-xs">
+                    {isEnhancement ? "Enhancement" : "New Product"}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs text-gray-600">
+                    {selectedMonth}
+                  </Badge>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  กรอกข้อมูลกำหนดการและ Milestone เพื่อแสดงผลบน Dashboard
+                </p>
+              </div>
             </div>
-          </CardHeader>
 
-          {/* Form Content (Scrollable) */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Close panel"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Form Content (Scrollable Body) */}
+          <form id="product-panel-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
             {/* Section 1: Basic Information */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-700 tracking-wider uppercase">
@@ -541,8 +557,8 @@ export function ProductFormModal({
             </div>
           </form>
 
-          {/* Footer Actions */}
-          <CardFooter className="border-t border-gray-100 p-4 bg-gray-50/60 shrink-0 flex items-center justify-between">
+          {/* Sticky Footer Actions */}
+          <div className="shrink-0 px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-200 bg-gray-50/90 backdrop-blur-xs flex items-center justify-between gap-3 z-10 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div>
               {productToEdit && onDelete && (
                 <div>
@@ -575,10 +591,11 @@ export function ProductFormModal({
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsConfirmingDelete(true)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs gap-1.5"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs gap-1.5 h-9"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>ลบรายการนี้</span>
+                      <span className="hidden sm:inline">ลบรายการนี้</span>
+                      <span className="sm:hidden">ลบ</span>
                     </Button>
                   )}
                 </div>
@@ -591,7 +608,7 @@ export function ProductFormModal({
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="text-xs"
+                className="text-xs sm:text-sm h-9 px-3 sm:px-4"
               >
                 ยกเลิก
               </Button>
@@ -600,15 +617,15 @@ export function ProductFormModal({
                 onClick={handleSubmit}
                 loading={isSubmitting}
                 size="sm"
-                className="bg-[#ED1C24] hover:bg-[#D4181F] text-white text-xs font-semibold gap-1.5"
+                className="bg-[#ED1C24] hover:bg-[#D4181F] text-white text-xs sm:text-sm font-semibold gap-1.5 h-9 px-4 sm:px-5 shadow-xs"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>{productToEdit ? "บันทึกการแก้ไข" : "เพิ่มรายการ"}</span>
               </Button>
             </div>
-          </CardFooter>
-        </Card>
-      </motion.div>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
