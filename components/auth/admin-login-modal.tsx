@@ -84,8 +84,9 @@ export function AdminLoginModal({
             )}
           </div>
 
-          <div className="text-[11px] text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-            🔒 สำหรับผู้รับผิดชอบข้อมูล เพื่อเพิ่ม, แก้ไข, ลบ Timeline หรือ FAQ
+          <div className="text-[11px] text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex items-center gap-1.5">
+            <Lock className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+            <span>สำหรับผู้รับผิดชอบข้อมูล เพื่อเพิ่ม, แก้ไข, ลบ Timeline หรือ FAQ</span>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">

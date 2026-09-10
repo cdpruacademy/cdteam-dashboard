@@ -42,6 +42,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { cn } from "@/lib/utils";
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -63,6 +65,13 @@ const BROKER_OPTIONS = [
   { value: "Other", label: "อื่นๆ (ระบุเอง)", color: "#64748B" },
 ];
 
+const TEAM_OWNERS = [
+  { id: "Jirapat O.", label: "Jirapat O. (จิรภัทร)" },
+  { id: "Sakkarin S.", label: "Sakkarin S. (ศักรินทร์)" },
+  { id: "Nitikan B.", label: "Nitikan B. (นิติกานต์)" },
+  { id: "Surakit P.", label: "Surakit P. (สุรกิจ)" },
+];
+
 export function ProductFormModal({
   isOpen,
   onClose,
@@ -77,7 +86,8 @@ export function ProductFormModal({
   const [broker, setBroker] = useState<string>(isEnhancement ? "ttb" : "New Broker");
   const [customBroker, setCustomBroker] = useState<string>("");
   const [name, setName] = useState<string>("");
-  const [owner, setOwner] = useState<string>("");
+  const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
+  const [customOwner, setCustomOwner] = useState<string>("");
   const [internalDate, setInternalDate] = useState<string>("TBC");
   const [commercialDate, setCommercialDate] = useState<string>("TBC");
   const [csDate, setCsDate] = useState<string>("");
@@ -115,7 +125,27 @@ export function ProductFormModal({
         setCustomBroker(productToEdit.broker);
       }
       setName(productToEdit.name);
-      setOwner(productToEdit.owner);
+
+      // Parse owners (e.g. "Nitikan B. / Surakit P." or "Surakit P.")
+      const rawOwner = productToEdit.owner || "";
+      const splitOwners = rawOwner.split(/[\/,]+/).map((s) => s.trim()).filter(Boolean);
+      const matchedKnown: string[] = [];
+      const leftoverCustom: string[] = [];
+
+      splitOwners.forEach((own) => {
+        const found = TEAM_OWNERS.find(
+          (t) => t.id.toLowerCase() === own.toLowerCase() || t.id.toLowerCase().includes(own.toLowerCase())
+        );
+        if (found) {
+          if (!matchedKnown.includes(found.id)) matchedKnown.push(found.id);
+        } else {
+          leftoverCustom.push(own);
+        }
+      });
+
+      setSelectedOwners(matchedKnown);
+      setCustomOwner(leftoverCustom.join(", "));
+
       setInternalDate(productToEdit.internalDate || "TBC");
       setCommercialDate(productToEdit.commercialDate || "TBC");
       setCsDate(productToEdit.csDate || "");
@@ -145,7 +175,8 @@ export function ProductFormModal({
       setBroker(isEnhancement ? "ttb" : "New Broker");
       setCustomBroker("");
       setName("");
-      setOwner("");
+      setSelectedOwners([]);
+      setCustomOwner("");
       setInternalDate("TBC");
       setCommercialDate("TBC");
       setCsDate("");
@@ -180,8 +211,15 @@ export function ProductFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { name?: string; owner?: string } = {};
-    if (!name.trim()) newErrors.name = "กรุณาระบุชื่อรายการ";
-    if (!owner.trim()) newErrors.owner = "กรุณาระบุชื่อผู้รับผิดชอบ";
+    if (!name.trim()) newErrors.name = "กรุณาระบุชื่องาน";
+
+    const allOwners: string[] = [...selectedOwners];
+    if (customOwner.trim()) {
+      allOwners.push(customOwner.trim());
+    }
+    const finalOwner = allOwners.join(" / ");
+
+    if (!finalOwner) newErrors.owner = "กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 ท่าน";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -207,7 +245,7 @@ export function ProductFormModal({
       const payload: Omit<ProductItem, "id"> = {
         broker: finalBroker,
         name: name.trim(),
-        owner: owner.trim(),
+        owner: finalOwner,
         internalDate: internalDate.trim() || undefined,
         commercialDate: commercialDate.trim() || undefined,
         csDate: csDate.trim() || undefined,
@@ -299,9 +337,9 @@ export function ProductFormModal({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Product Name */}
+                {/* Product Name -> ชื่องาน (Task Name) */}
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label required>ชื่อรายการ / โครงการ (Product Name)</Label>
+                  <Label required>ชื่องาน (Task Name)</Label>
                   <Input
                     placeholder="เช่น PRUWealth Max, Rider Cancer Plus"
                     value={name}
@@ -315,8 +353,8 @@ export function ProductFormModal({
                   )}
                 </div>
 
-                {/* Broker / Partner Select */}
-                <div className="space-y-1.5">
+                {/* Broker / Partner Select (Single dot) */}
+                <div className="md:col-span-2 space-y-1.5">
                   <Label required>ช่องทาง / พาร์ทเนอร์ (Channel / Broker)</Label>
                   <Select
                     value={broker}
@@ -326,13 +364,7 @@ export function ProductFormModal({
                     }}
                   >
                     <SelectTrigger>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: currentBrokerObj.color }}
-                        />
-                        <SelectValue placeholder="เลือกช่องทาง" />
-                      </div>
+                      <SelectValue placeholder="เลือกช่องทาง" />
                     </SelectTrigger>
                     <SelectContent>
                       {BROKER_OPTIONS.map((opt) => (
@@ -360,18 +392,51 @@ export function ProductFormModal({
                   )}
                 </div>
 
-                {/* Owner */}
-                <div className="space-y-1.5">
-                  <Label required>ผู้รับผิดชอบ (Project Owner)</Label>
-                  <Input
-                    leftIcon={<User className="w-4 h-4 text-gray-400" />}
-                    placeholder="เช่น Surakit P."
-                    value={owner}
-                    onChange={(e) => setOwner(e.target.value)}
-                    error={!!errors.owner}
-                    clearable
-                    onClear={() => setOwner("")}
-                  />
+                {/* Owner Checklist (Multi-select) */}
+                <div className="md:col-span-2 space-y-2">
+                  <Label required>ผู้รับผิดชอบ (Responsible Persons)</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-gray-50/80 rounded-xl border border-gray-200">
+                    {TEAM_OWNERS.map((t) => {
+                      const isChecked = selectedOwners.includes(t.id);
+                      return (
+                        <label
+                          key={t.id}
+                          className={cn(
+                            "flex items-center gap-2 p-2 rounded-lg border cursor-pointer select-none transition-all text-xs font-medium",
+                            isChecked
+                              ? "bg-red-50/80 border-red-200 text-red-700 font-semibold"
+                              : "bg-white border-gray-200 text-gray-700 hover:bg-gray-100/70"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedOwners([...selectedOwners, t.id]);
+                              } else {
+                                setSelectedOwners(selectedOwners.filter((id) => id !== t.id));
+                              }
+                            }}
+                            className="w-4 h-4 text-[#ED1C24] rounded border-gray-300 focus:ring-red-500"
+                          />
+                          <span>{t.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Owner add-on */}
+                  <div className="pt-1">
+                    <Input
+                      leftIcon={<User className="w-3.5 h-3.5 text-gray-400" />}
+                      placeholder="หรือระบุชื่อผู้รับผิดชอบเพิ่มเติม (เช่น บุคคลภายนอก)..."
+                      value={customOwner}
+                      onChange={(e) => setCustomOwner(e.target.value)}
+                      size="sm"
+                    />
+                  </div>
+
                   {errors.owner && (
                     <p className="text-xs text-red-500 font-medium">{errors.owner}</p>
                   )}
@@ -391,30 +456,31 @@ export function ProductFormModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Internal Training Date</Label>
-                  <Input
-                    leftIcon={<Clock className="w-4 h-4 text-gray-400" />}
-                    placeholder="เช่น 10 Aug 2026 หรือ TBC"
+                  <DatePicker
                     value={internalDate}
-                    onChange={(e) => setInternalDate(e.target.value)}
+                    onChange={(val) => setInternalDate(val)}
+                    placeholder="เลือกวันที่ หรือ TBC"
+                    allowTBC
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <Label>Commercial Launch Date</Label>
-                  <Input
-                    leftIcon={<Clock className="w-4 h-4 text-green-600" />}
-                    placeholder="เช่น 1 Sep 2026 หรือ TBC"
+                  <DatePicker
                     value={commercialDate}
-                    onChange={(e) => setCommercialDate(e.target.value)}
+                    onChange={(val) => setCommercialDate(val)}
+                    placeholder="เลือกวันที่ หรือ TBC"
+                    allowTBC
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <Label optional>CS Date (ถ้ามี)</Label>
-                  <Input
-                    placeholder="เช่น 18 Aug 2026"
+                  <DatePicker
                     value={csDate}
-                    onChange={(e) => setCsDate(e.target.value)}
+                    onChange={(val) => setCsDate(val)}
+                    placeholder="เลือกวันที่ CS Date"
+                    allowTBC
                   />
                 </div>
 
@@ -483,21 +549,21 @@ export function ProductFormModal({
                         {ms.enabled && (
                           <div className="flex items-center gap-2">
                             {/* Milestone Date */}
-                            <Input
-                              size="sm"
-                              placeholder="วันที่ เช่น 17 Jul"
-                              value={ms.date}
-                              onChange={(e) =>
-                                setMilestonesState((prev) => ({
-                                  ...prev,
-                                  [phase.key]: {
-                                    ...prev[phase.key],
-                                    date: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="w-28 text-xs"
-                            />
+                            <div className="w-36">
+                              <DatePicker
+                                value={ms.date}
+                                onChange={(val) =>
+                                  setMilestonesState((prev) => ({
+                                    ...prev,
+                                    [phase.key]: {
+                                      ...prev[phase.key],
+                                      date: val,
+                                    },
+                                  }))
+                                }
+                                placeholder="เลือกวันที่"
+                              />
+                            </div>
 
                             {/* Status toggle button */}
                             <button
@@ -514,13 +580,23 @@ export function ProductFormModal({
                                   },
                                 }))
                               }
-                              className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border transition-all ${
                                 ms.status === "completed"
                                   ? "bg-green-50 text-green-700 border-green-200"
                                   : "bg-gray-100 text-gray-600 border-gray-300"
                               }`}
                             >
-                              {ms.status === "completed" ? "✓ Completed" : "⏳ Pending"}
+                              {ms.status === "completed" ? (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                  <span>Completed</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-3 h-3 text-gray-500" />
+                                  <span>Pending</span>
+                                </>
+                              )}
                             </button>
 
                             {/* E-learning Icon toggle */}

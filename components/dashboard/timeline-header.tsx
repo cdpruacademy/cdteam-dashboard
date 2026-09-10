@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Target,
 } from "lucide-react";
 import { CloudStatusBadge } from "./cloud-status-badge";
 
@@ -109,31 +110,33 @@ export function TimelineHeader({
         {/* Row A: Timeline Switcher Tabs + Month Navigation */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Timeline Mode Tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-gray-100/90 rounded-xl">
+          <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-gray-100/90 rounded-xl">
             <button
               type="button"
               onClick={() => onTimelineTypeChange("product")}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 !isEnhancement
                   ? "bg-white text-[#ED1C24] shadow-xs"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-[#ED1C24]" />
-              <span>New Product Timeline</span>
+              <span className="hidden sm:inline">New Product Timeline</span>
+              <span className="sm:hidden">New Product</span>
             </button>
 
             <button
               type="button"
               onClick={() => onTimelineTypeChange("enhancement")}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 isEnhancement
                   ? "bg-white text-[#0066CC] shadow-xs"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-[#0066CC]" />
-              <span>Enhancement Timeline</span>
+              <span className="hidden sm:inline">Enhancement Timeline</span>
+              <span className="sm:hidden">Enhancement</span>
             </button>
           </div>
 
@@ -145,11 +148,11 @@ export function TimelineHeader({
         </div>
 
         {/* Row B: Month Selector Navigation Pills */}
-        <div className="flex items-center justify-between gap-2 pt-1 bg-slate-50/80 p-2 rounded-xl border border-slate-200/60">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-xs font-bold text-gray-600 flex items-center gap-1 px-1">
+        <div className="flex items-center justify-between gap-1.5 pt-1 bg-slate-50/80 p-1.5 sm:p-2 rounded-xl border border-slate-200/60">
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-xs font-bold text-gray-600 flex items-center gap-1 px-1" title="เลือกรอบเดือน">
               <Clock className="w-3.5 h-3.5 text-gray-500" />
-              <span>รอบเดือน:</span>
+              <span className="hidden sm:inline">รอบเดือน:</span>
             </span>
 
             {/* Prev Month Arrow */}
@@ -247,20 +250,19 @@ export function TimelineHeader({
       {/* 2. MAIN TITLE BAR: Visible on Export & Normal */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 pt-0">
         {/* Left: Calendar Badge + Month Title & As-Of Date */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-3 sm:gap-3.5">
           <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 transition-colors ${
+            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 transition-colors ${
               isEnhancement ? "bg-[#005BAB]" : "bg-[#ED1C24]"
             }`}
           >
-            <Calendar className="w-6 h-6" />
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-2xl md:text-3xl font-black tracking-tight text-[#2D2D2D] leading-none">
+              <span className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-[#2D2D2D] leading-none">
                 {selectedMonth}
               </span>
-
             </div>
 
             {/* Editable As Of Text */}
@@ -312,23 +314,23 @@ export function TimelineHeader({
         </div>
 
         {/* Right Area: Big Title (Stays on export) + Action Buttons (Hidden on Export) */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 ml-auto">
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-2.5 w-full md:w-auto md:ml-auto">
           {/* Big Presentation Title (Clean on Export) */}
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <span
-              className={`text-xl md:text-2xl font-black tracking-tight ${
+              className={`text-lg sm:text-xl md:text-2xl font-black tracking-tight ${
                 isEnhancement ? "text-[#0066CC]" : "text-[#ED1C24]"
               }`}
             >
               {isEnhancement ? "ENHANCEMENT" : "NEW PRODUCT"}{" "}
             </span>
-            <span className="text-xl md:text-2xl font-black text-[#5A646E] tracking-tight">
+            <span className="text-lg sm:text-xl md:text-2xl font-black text-[#5A646E] tracking-tight">
               TIMELINE
             </span>
           </div>
 
           {/* ALL ACTION BUTTONS (COMPLETELY HIDDEN ON EXPORT) */}
-          <div className="export-hide flex items-center gap-1.5 sm:gap-2">
+          <div className="export-hide flex flex-wrap items-center gap-1 sm:gap-2">
 
             {/* Color Customizer Button (Admin only) */}
             {isAdmin && (
@@ -429,8 +431,9 @@ export function TimelineHeader({
           </div>
 
           {/* Right Column Label - Most Important */}
-          <div className="text-xs md:text-sm font-black text-white pr-2 text-center uppercase tracking-wider bg-[#ED1C24] rounded-md py-2 px-2 shadow-sm">
-            🎯 Target Launch
+          <div className="text-xs md:text-sm font-black text-white pr-2 text-center uppercase tracking-wider bg-[#ED1C24] rounded-md py-2 px-2 shadow-sm flex items-center justify-center gap-1.5">
+            <Target className="w-4 h-4 shrink-0" />
+            <span>Target Launch</span>
           </div>
         </div>
       </div>

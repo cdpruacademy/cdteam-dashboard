@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState, useRef } from "react";
 import { parseUploadedDataFile } from "@/lib/excel-service";
 import { ProductItem } from "@/lib/timeline-data";
-import { Upload, X, CheckCircle2, AlertCircle, FileSpreadsheet } from "lucide-react";
+import { Upload, X, CheckCircle2, AlertCircle, FileSpreadsheet, Info } from "lucide-react";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -118,9 +118,12 @@ export function ImportModal({
             </div>
           )}
 
-          <div className="text-[11px] text-gray-500 bg-slate-50 p-3 rounded-lg border border-gray-100">
-            💡 <strong>วิธีใช้:</strong> คุณสามารถกดดาวน์โหลดไฟล์ Excel หรือ JSON จากหน้าเว็บ
-            แล้วนำไปแก้ไขข้อมูลในเครื่อง จากนั้นลากไฟล์กลับเข้ามาที่นี่เพื่ออัปเดตข้อมูลบนหน้าจอได้ทันที
+          <div className="text-[11px] text-gray-500 bg-slate-50 p-3 rounded-lg border border-gray-100 flex items-start gap-2">
+            <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+            <div>
+              <strong>วิธีใช้:</strong> คุณสามารถกดดาวน์โหลดไฟล์ Excel หรือ JSON จากหน้าเว็บ
+              แล้วนำไปแก้ไขข้อมูลในเครื่อง จากนั้นลากไฟล์กลับเข้ามาที่นี่เพื่ออัปเดตข้อมูลบนหน้าจอได้ทันที
+            </div>
           </div>
 
           <div className="flex justify-end pt-2">

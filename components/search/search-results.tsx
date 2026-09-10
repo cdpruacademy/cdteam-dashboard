@@ -175,7 +175,7 @@ export function KnowledgeSearch() {
       {
         id: `ai-sys-${Date.now()}`,
         role: "assistant",
-        content: `✅ บันทึกคำถาม "${newItem.question}" เข้าสู่คลัง FAQ สำเร็จแล้ว! ตอนนี้ระบบและ AI สามารถตอบคำถามนี้ได้แล้วครับ`,
+        content: `บันทึกคำถาม "${newItem.question}" เข้าสู่คลัง FAQ สำเร็จแล้ว! ตอนนี้ระบบและ AI สามารถตอบคำถามนี้ได้แล้วครับ`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ]);

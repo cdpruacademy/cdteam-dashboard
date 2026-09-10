@@ -10,7 +10,7 @@ import { TimelineRow } from "./timeline-row";
 import { ProductFormModal } from "./product-form-modal";
 import { BrokerColorModal } from "./broker-color-modal";
 import { toPng } from "html-to-image";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus, AlertCircle, ShieldCheck } from "lucide-react";
 
 const BROKER_COLORS_KEY = "pru_broker_colors_map_v1";
 
@@ -140,11 +140,11 @@ export function ProductTimeline() {
   };
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto py-4 px-3 sm:px-6">
+    <div className="w-full max-w-[1440px] mx-auto py-2 sm:py-4 px-2 sm:px-6">
       {/* Main Container Card */}
       <div
         ref={dashboardRef}
-        className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8"
+        className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 sm:p-6 lg:p-8"
       >
         {/* Timeline Header */}
         <TimelineHeader
@@ -215,8 +215,15 @@ export function ProductTimeline() {
 
         {/* Clean Footer (without tips) */}
         <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
-          <div className="export-hide">
-            {isAdmin ? "🔒 สิทธิ์ Admin: เปิดใช้งาน" : "โหมดผู้ชม (Read-only)"}
+          <div className="export-hide flex items-center gap-1">
+            {isAdmin ? (
+              <>
+                <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
+                <span>สิทธิ์ Admin: เปิดใช้งาน</span>
+              </>
+            ) : (
+              <span>โหมดผู้ชม (Read-only)</span>
+            )}
           </div>
           <div className="font-medium text-gray-500">
             Prudential Thailand • ฝ่ายพัฒนาหลักสูตร

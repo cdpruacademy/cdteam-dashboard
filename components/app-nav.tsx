@@ -42,29 +42,31 @@ export function AppNav() {
 
           {/* Right: Navigation Tabs & Admin Status */}
           <div className="flex items-center gap-2 sm:gap-4">
-            <nav className="flex items-center gap-1.5 sm:gap-2">
+            <nav className="flex items-center gap-1 sm:gap-2">
               <Link
                 href="/"
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
+                className={`inline-flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all ${
                   isTimeline
                     ? "bg-red-50 text-[#ED1C24] border border-red-200 shadow-2xs"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <Calendar className="w-4 h-4" />
-                <span>Product Timeline</span>
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden xs:inline sm:inline">Product Timeline</span>
+                <span className="inline xs:hidden sm:hidden">Timeline</span>
               </Link>
 
               <Link
                 href="/search"
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
+                className={`inline-flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all ${
                   isSearch
                     ? "bg-red-50 text-[#ED1C24] border border-red-200 shadow-2xs"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <Search className="w-4 h-4" />
-                <span>คลังคำถาม (Search)</span>
+                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden xs:inline sm:inline">คลังคำถาม (Search)</span>
+                <span className="inline xs:hidden sm:hidden">Search</span>
               </Link>
             </nav>
 
