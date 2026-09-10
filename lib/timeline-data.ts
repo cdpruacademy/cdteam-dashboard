@@ -138,6 +138,8 @@ export interface ProductItem {
   csDate?: string;
   customRightLabel?: string; // For things like "Sent out : 7 Aug 2026" or "Submission Date : Mid of Oct 2026"
   month?: string; // e.g. "AUG 2026"
+  isCrossMonth?: boolean; // True if this item appears because target launch matches current selected month
+  originalMonth?: string; // e.g. "AUG 2026" where it was originally created
 }
 
 // 1. Initial 9 New Products (Red theme)

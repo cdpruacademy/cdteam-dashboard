@@ -229,10 +229,62 @@ export function useProducts() {
     [selectedMonth, syncStore]
   );
 
-  // Active items based on tab
+  // Helper: check if a target launch date or label matches a target month (e.g. "2 Oct 2026" or "Oct 2026" matches "OCT 2026")
+  const matchesTargetMonth = useCallback((dateStr: string | undefined, targetMonth: string) => {
+    if (!dateStr) return false;
+    const cleanStr = dateStr.trim().toLowerCase();
+    const cleanTarget = targetMonth.trim().toLowerCase(); // e.g. "oct 2026"
+    const [targetM, targetY] = cleanTarget.split(" "); // "oct", "2026"
+
+    // If string is TBC or empty
+    if (cleanStr.includes("tbc")) return false;
+
+    // Check month abbreviation (3-4 chars)
+    const monthPrefix = targetM.slice(0, 3);
+    const hasMonth = cleanStr.includes(monthPrefix);
+    // If year exists, check year
+    const hasYear = targetY ? cleanStr.includes(targetY) : true;
+
+    return hasMonth && hasYear;
+  }, []);
+
+  // Active items based on tab + Option A: Auto include products from other months whose Target Launch matches selectedMonth
   const currentItems = useMemo(() => {
-    return timelineType === "product" ? currentMonthData.products : currentMonthData.enhancements;
-  }, [timelineType, currentMonthData]);
+    const nativeList = timelineType === "product" ? currentMonthData.products : currentMonthData.enhancements;
+    const nativeIds = new Set(nativeList.map((p) => p.id));
+
+    // Find cross-month items from other months
+    const crossMonthItems: ProductItem[] = [];
+
+    Object.entries(monthlyStore).forEach(([mKey, mData]) => {
+      // Don't duplicate native month
+      if (mKey.toUpperCase() === selectedMonth.toUpperCase()) return;
+
+      const items = timelineType === "product" ? mData.products : mData.enhancements;
+      if (!items || !Array.isArray(items)) return;
+
+      items.forEach((item) => {
+        // Skip if already in native month (by ID or exact match)
+        if (nativeIds.has(item.id)) return;
+
+        // Check commercialDate first, then internalDate, then customRightLabel
+        const isMatch =
+          matchesTargetMonth(item.commercialDate, selectedMonth) ||
+          matchesTargetMonth(item.internalDate, selectedMonth) ||
+          matchesTargetMonth(item.customRightLabel, selectedMonth);
+
+        if (isMatch) {
+          crossMonthItems.push({
+            ...item,
+            isCrossMonth: true,
+            originalMonth: mKey,
+          });
+        }
+      });
+    });
+
+    return [...nativeList, ...crossMonthItems];
+  }, [timelineType, currentMonthData, monthlyStore, selectedMonth, matchesTargetMonth]);
 
   // CRUD Operations
   const addProduct = useCallback(
