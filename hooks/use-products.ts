@@ -27,89 +27,105 @@ export function useProducts() {
   const [timelineType, setTimelineType] = useState<TimelineType>("product");
   const [availableMonths, setAvailableMonths] = useState<string[]>(AVAILABLE_MONTHS);
   const [selectedMonth, setSelectedMonth] = useState<string>("AUG 2026");
-  const [monthlyStore, setMonthlyStore] = useState<MonthlyStore>(INITIAL_MONTHLY_STORE);
+  const [monthlyStore, setMonthlyStore] = useState<MonthlyStore>({});
   const [isLoaded, setIsLoaded] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Initialize from localStorage + Cloud DB after mounting
+  // Initialize strictly from Supabase Cloud DB (with cached data only as instant offline mirror)
   useEffect(() => {
-    try {
-      // 1. Load available months from local cache
-      const storedMonths = localStorage.getItem(AVAILABLE_MONTHS_KEY);
-      if (storedMonths) {
-        const parsed = JSON.parse(storedMonths);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setAvailableMonths(parsed);
+    let isMounted = true;
+
+    async function initializeFromCloud() {
+      // 1. Read locally cached active month and available months for immediate tab structure
+      try {
+        const storedMonths = localStorage.getItem(AVAILABLE_MONTHS_KEY);
+        if (storedMonths) {
+          const parsed = JSON.parse(storedMonths);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAvailableMonths(parsed);
+          }
         }
-      }
 
-      // 2. Load active month from local cache
-      const storedActiveMonth = localStorage.getItem(ACTIVE_MONTH_KEY);
-      if (storedActiveMonth && AVAILABLE_MONTHS.concat(JSON.parse(storedMonths || "[]")).includes(storedActiveMonth)) {
-        setSelectedMonth(storedActiveMonth);
-      }
-
-      // 3. Load monthly store from local cache
-      const storedData = localStorage.getItem(MONTHLY_STORAGE_KEY);
-      if (storedData) {
-        const parsed: MonthlyStore = JSON.parse(storedData);
-        setMonthlyStore(parsed);
-      } else {
-        // Migration from legacy v2 storage if present
-        const legacyProducts = localStorage.getItem("pru_dashboard_products_v2");
-        const legacyEnhancements = localStorage.getItem("pru_dashboard_enhancements_v2");
-        const legacyConfig = localStorage.getItem("pru_timeline_config_v2");
-
-        const initial = { ...INITIAL_MONTHLY_STORE };
-        if (legacyProducts || legacyEnhancements) {
-          initial["AUG 2026"] = {
-            products: legacyProducts ? JSON.parse(legacyProducts) : INITIAL_PRODUCTS,
-            enhancements: legacyEnhancements ? JSON.parse(legacyEnhancements) : INITIAL_ENHANCEMENTS,
-            asOfText: legacyConfig ? JSON.parse(legacyConfig).asOfText || "as of 31 Aug" : "as of 31 Aug",
-          };
+        const storedActiveMonth = localStorage.getItem(ACTIVE_MONTH_KEY);
+        if (storedActiveMonth) {
+          setSelectedMonth(storedActiveMonth);
         }
-        setMonthlyStore(initial);
-        localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(initial));
-      }
 
-      // 4. Try loading latest data from Supabase Cloud DB
+        // Check if we have cached cloud data in localStorage
+        const storedData = localStorage.getItem(MONTHLY_STORAGE_KEY);
+        if (storedData) {
+          const parsed: MonthlyStore = JSON.parse(storedData);
+          if (parsed && typeof parsed === "object") {
+            setMonthlyStore(parsed);
+          }
+        }
+      } catch (_) {}
+
+      // 2. Fetch authoritative single source of truth from Supabase
       const config = getStoredSupabaseConfig();
       if (config) {
         setIsSyncing(true);
-        fetchTimelineFromCloud()
-          .then((cloudData) => {
-            setIsSyncing(false);
-            if (cloudData && cloudData.monthlyStore && Object.keys(cloudData.monthlyStore).length > 0) {
-              setMonthlyStore(cloudData.monthlyStore);
-              if (cloudData.availableMonths && cloudData.availableMonths.length > 0) {
-                setAvailableMonths(cloudData.availableMonths);
-              }
-              if (cloudData.activeMonth) {
-                setSelectedMonth(cloudData.activeMonth);
-              }
-              setIsCloudConnected(true);
-              // Save to local cache as fallback
-              try {
-                localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(cloudData.monthlyStore));
-                if (cloudData.availableMonths) {
-                  localStorage.setItem(AVAILABLE_MONTHS_KEY, JSON.stringify(cloudData.availableMonths));
-                }
-              } catch (_) {}
-            } else {
-              setIsCloudConnected(true);
+        try {
+          const cloudData = await fetchTimelineFromCloud();
+          if (!isMounted) return;
+
+          if (cloudData && cloudData.monthlyStore && typeof cloudData.monthlyStore === "object") {
+            // Found data in Supabase - use it directly
+            setMonthlyStore(cloudData.monthlyStore);
+            if (cloudData.availableMonths && cloudData.availableMonths.length > 0) {
+              setAvailableMonths(cloudData.availableMonths);
             }
-          })
-          .catch((err) => {
-            console.warn("Could not fetch initial cloud data", err);
+            if (cloudData.activeMonth) {
+              setSelectedMonth(cloudData.activeMonth);
+            }
+            setIsCloudConnected(true);
+
+            // Update offline cache
+            try {
+              localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(cloudData.monthlyStore));
+              if (cloudData.availableMonths) {
+                localStorage.setItem(AVAILABLE_MONTHS_KEY, JSON.stringify(cloudData.availableMonths));
+              }
+            } catch (_) {}
+          } else {
+            // First time setup or empty database: initialize clean structure for available months without dummy data
+            const emptyStore: MonthlyStore = {};
+            AVAILABLE_MONTHS.forEach((m) => {
+              emptyStore[m] = {
+                products: [],
+                enhancements: [],
+                asOfText: DEFAULT_AS_OF_BY_MONTH[m] || `as of 15 ${m.split(" ")[0]}`,
+              };
+            });
+            setMonthlyStore(emptyStore);
+            setIsCloudConnected(true);
+            saveTimelineToCloud({
+              monthlyStore: emptyStore,
+              availableMonths: AVAILABLE_MONTHS,
+              activeMonth: "AUG 2026",
+            }).catch(() => {});
+          }
+        } catch (err) {
+          console.warn("Could not fetch cloud data:", err);
+        } finally {
+          if (isMounted) {
             setIsSyncing(false);
-          });
+            setIsLoaded(true);
+          }
+        }
+      } else {
+        if (isMounted) {
+          setIsLoaded(true);
+        }
       }
-    } catch (err) {
-      console.error("Failed to load monthly timeline data", err);
-    } finally {
-      setIsLoaded(true);
     }
+
+    initializeFromCloud();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Listen to Supabase Realtime changes
@@ -323,7 +339,17 @@ export function useProducts() {
   const updateProduct = useCallback(
     (id: string, updates: Partial<ProductItem>) => {
       setMonthlyStore((prev) => {
-        const monthObj = prev[selectedMonth];
+        // Find which month contains this product (default to selectedMonth)
+        let targetMonth = selectedMonth;
+        for (const [mKey, mData] of Object.entries(prev)) {
+          const list = timelineType === "product" ? mData.products : mData.enhancements;
+          if (list?.some((p) => p.id === id)) {
+            targetMonth = mKey;
+            break;
+          }
+        }
+
+        const monthObj = prev[targetMonth];
         if (!monthObj) return prev;
 
         const updatedMonth =
@@ -339,7 +365,7 @@ export function useProducts() {
 
         const updated: MonthlyStore = {
           ...prev,
-          [selectedMonth]: updatedMonth,
+          [targetMonth]: updatedMonth,
         };
         syncStore(updated);
         return updated;
@@ -351,7 +377,17 @@ export function useProducts() {
   const deleteProduct = useCallback(
     (id: string) => {
       setMonthlyStore((prev) => {
-        const monthObj = prev[selectedMonth];
+        // Find which month actually contains this product
+        let targetMonth = selectedMonth;
+        for (const [mKey, mData] of Object.entries(prev)) {
+          const list = timelineType === "product" ? mData.products : mData.enhancements;
+          if (list?.some((p) => p.id === id)) {
+            targetMonth = mKey;
+            break;
+          }
+        }
+
+        const monthObj = prev[targetMonth];
         if (!monthObj) return prev;
 
         const updatedMonth =
@@ -367,7 +403,7 @@ export function useProducts() {
 
         const updated: MonthlyStore = {
           ...prev,
-          [selectedMonth]: updatedMonth,
+          [targetMonth]: updatedMonth,
         };
         syncStore(updated);
         return updated;
@@ -377,16 +413,22 @@ export function useProducts() {
   );
 
   const resetToDefault = useCallback(() => {
+    const confirmed = confirm(
+      `คุณต้องการล้างข้อมูลทั้งหมดในรอบเดือน ${selectedMonth} หรือไม่?`
+    );
+    if (!confirmed) return;
+
     setMonthlyStore((prev) => {
-      const defaultMonthData = INITIAL_MONTHLY_STORE[selectedMonth] || {
-        products: INITIAL_PRODUCTS,
-        enhancements: INITIAL_ENHANCEMENTS,
-        asOfText: DEFAULT_AS_OF_BY_MONTH[selectedMonth] || "as of 31 Aug",
+      const defaultAsOf = DEFAULT_AS_OF_BY_MONTH[selectedMonth] || `as of 15 ${selectedMonth.split(" ")[0]}`;
+      const emptyMonthData = {
+        products: [],
+        enhancements: [],
+        asOfText: defaultAsOf,
       };
 
       const updated: MonthlyStore = {
         ...prev,
-        [selectedMonth]: defaultMonthData,
+        [selectedMonth]: emptyMonthData,
       };
       syncStore(updated);
       return updated;

@@ -10,7 +10,7 @@ import { TimelineRow } from "./timeline-row";
 import { ProductFormModal } from "./product-form-modal";
 import { BrokerColorModal } from "./broker-color-modal";
 import { toPng } from "html-to-image";
-import { Plus, AlertCircle, ShieldCheck } from "lucide-react";
+import { Plus, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
 
 const BROKER_COLORS_KEY = "pru_broker_colors_map_v1";
 
@@ -171,7 +171,24 @@ export function ProductTimeline() {
         {/* Timeline Rows Area with Horizontal Scroll */}
         <div className="overflow-x-auto pb-4 mt-2">
           <div className="min-w-[960px] space-y-1">
-            {isLoaded && currentItems.length === 0 ? (
+            {!isLoaded ? (
+              /* Loading Skeleton / Spinner (Zero Flicker) */
+              <div className="py-14 text-center space-y-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-50 text-[#ED1C24] animate-pulse mx-auto">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#ED1C24]" />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-gray-700">กำลังเชื่อมต่อและโหลดข้อมูลจาก Cloud...</p>
+                  <p className="text-xs text-gray-400">ดึงข้อมูลรอบเดือน {selectedMonth} จาก Supabase</p>
+                </div>
+                {/* 3 Ghost Skeletons */}
+                <div className="max-w-2xl mx-auto space-y-2 pt-2 opacity-60">
+                  <div className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+                  <div className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+                  <div className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+                </div>
+              </div>
+            ) : currentItems.length === 0 ? (
               <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-xl my-4">
                 <AlertCircle className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                 <h3 className="text-sm font-bold text-gray-700">
