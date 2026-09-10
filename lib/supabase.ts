@@ -15,27 +15,25 @@ export interface CloudTimelinePayload {
 
 const SUPABASE_CONFIG_KEY = "pru_supabase_config_v1";
 
-// Read configuration from LocalStorage or environment variables
+export const DEFAULT_SUPABASE_URL = "https://bwevlsmrtbqbgsqjpppn.supabase.co";
+export const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_-o_L_yfoqNCpq4NnP1tiHQ_kFbmbiMF";
+
+// Read configuration from LocalStorage or environment variables or defaults
 export function getStoredSupabaseConfig(): SupabaseConfig | null {
-  if (typeof window === "undefined") {
-    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (envUrl && envKey) return { url: envUrl, anonKey: envKey };
-    return null;
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(SUPABASE_CONFIG_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.url && parsed.anonKey) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
   }
 
-  try {
-    const stored = localStorage.getItem(SUPABASE_CONFIG_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.url && parsed.anonKey) {
-        return parsed;
-      }
-    }
-  } catch (_) {}
-
-  const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
   if (envUrl && envKey) {
     return { url: envUrl, anonKey: envKey };
   }
