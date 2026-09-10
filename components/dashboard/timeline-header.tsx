@@ -46,7 +46,6 @@ interface TimelineHeaderProps {
   isAdmin?: boolean;
   isCloudConnected?: boolean;
   isSyncing?: boolean;
-  onOpenCloudModal?: () => void;
 }
 
 export function TimelineHeader({
@@ -69,7 +68,6 @@ export function TimelineHeader({
   isAdmin = false,
   isCloudConnected = false,
   isSyncing = false,
-  onOpenCloudModal,
 }: TimelineHeaderProps) {
   const [isEditingAsOf, setIsEditingAsOf] = useState(false);
   const [tempAsOf, setTempAsOf] = useState(asOfText);
@@ -351,8 +349,6 @@ export function TimelineHeader({
             <CloudStatusBadge
               isCloudConnected={isCloudConnected}
               isSyncing={isSyncing}
-              onClick={onOpenCloudModal}
-              isAdmin={isAdmin}
             />
 
             {/* Color Customizer Button (Admin only) */}

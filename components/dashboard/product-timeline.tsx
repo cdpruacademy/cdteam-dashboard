@@ -9,7 +9,6 @@ import { TimelineHeader } from "./timeline-header";
 import { TimelineRow } from "./timeline-row";
 import { ProductFormModal } from "./product-form-modal";
 import { BrokerColorModal } from "./broker-color-modal";
-import { CloudSettingsModal } from "./cloud-settings-modal";
 import { toPng } from "html-to-image";
 import { Plus, AlertCircle } from "lucide-react";
 
@@ -45,16 +44,13 @@ export function ProductTimeline() {
     exportJSON,
     monthlyStore,
     isCloudConnected,
-    setIsCloudConnected,
     isSyncing,
-    handleCloudDataLoaded,
   } = useProducts();
 
   const { isAdmin } = useAdminAuth();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isColorModalOpen, setIsColorModalOpen] = useState(false);
-  const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<ProductItem | null>(null);
   const [isExportingAll, setIsExportingAll] = useState(false);
 
@@ -171,7 +167,6 @@ export function ProductTimeline() {
           isAdmin={isAdmin}
           isCloudConnected={isCloudConnected}
           isSyncing={isSyncing}
-          onOpenCloudModal={() => setIsCloudModalOpen(true)}
         />
 
         {/* Timeline Rows Area with Horizontal Scroll */}
@@ -248,17 +243,6 @@ export function ProductTimeline() {
         onColorChange={handleColorChange}
         onResetColors={handleResetColors}
         currentColors={colorMap}
-      />
-
-      {/* Cloud Database Settings Modal */}
-      <CloudSettingsModal
-        isOpen={isCloudModalOpen}
-        onClose={() => setIsCloudModalOpen(false)}
-        monthlyStore={monthlyStore}
-        availableMonths={availableMonths}
-        activeMonth={selectedMonth}
-        onCloudDataLoaded={handleCloudDataLoaded}
-        onStatusChange={setIsCloudConnected}
       />
     </div>
   );

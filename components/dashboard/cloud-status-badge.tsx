@@ -6,35 +6,26 @@ import { Cloud, CheckCircle2, HardDrive, RefreshCw } from "lucide-react";
 interface CloudStatusBadgeProps {
   isCloudConnected: boolean;
   isSyncing?: boolean;
-  onClick?: () => void;
-  isAdmin?: boolean;
 }
 
 export function CloudStatusBadge({
   isCloudConnected,
   isSyncing = false,
-  onClick,
-  isAdmin = false,
 }: CloudStatusBadgeProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!isAdmin}
+    <div
       title={
-        isAdmin
-          ? "คลิกเพื่อจัดการการเชื่อมต่อ Cloud Database (Supabase)"
-          : isCloudConnected
-          ? "ระบบเชื่อมต่อ Cloud กลาง ข้อมูลอัปเดตตรงกันทุกเครื่อง"
+        isCloudConnected
+          ? "เชื่อมต่อฐานข้อมูล Cloud (Supabase) เรียบร้อยแล้ว ข้อมูลอัปเดตตรงกันทุกเครื่อง"
           : "ทำงานในโหมดออฟไลน์ (Local Storage)"
       }
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all select-none cursor-default ${
         isSyncing
           ? "bg-blue-50 text-blue-700 border-blue-200 animate-pulse"
           : isCloudConnected
-          ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-      } ${isAdmin ? "cursor-pointer" : "cursor-default"}`}
+          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+          : "bg-slate-100 text-slate-600 border-slate-200"
+      }`}
     >
       {isSyncing ? (
         <>
@@ -56,6 +47,6 @@ export function CloudStatusBadge({
           <span className="sm:hidden">Local</span>
         </>
       )}
-    </button>
+    </div>
   );
 }
