@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useProducts } from "@/hooks/use-products";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { ProductItem } from "@/lib/timeline-data";
-import { TimelineHeader } from "./timeline-header";
+import { TimelineHeader, TimelineTrackHeader } from "./timeline-header";
 import { TimelineRow } from "./timeline-row";
 import { ProductFormModal } from "./product-form-modal";
 import { BrokerColorModal } from "./broker-color-modal";
@@ -168,9 +168,12 @@ export function ProductTimeline() {
           isSyncing={isSyncing}
         />
 
-        {/* Timeline Rows Area with Horizontal Scroll */}
+        {/* Timeline Table Area with Unified Horizontal Scroll */}
         <div className="overflow-x-auto pb-4 mt-2">
           <div className="min-w-[960px] space-y-1">
+            {/* Phase Track Column Header (Scrolls together with Rows) */}
+            <TimelineTrackHeader timelineType={timelineType} />
+
             {!isLoaded ? (
               /* Loading Skeleton / Spinner (Zero Flicker) */
               <div className="py-14 text-center space-y-4">

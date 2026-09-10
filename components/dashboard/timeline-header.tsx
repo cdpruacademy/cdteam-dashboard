@@ -72,7 +72,6 @@ export function TimelineHeader({
   const [newMonthInput, setNewMonthInput] = useState("");
 
   const isEnhancement = timelineType === "enhancement";
-  const phases = isEnhancement ? ENHANCEMENT_PHASES : PRODUCT_PHASES;
 
   const currentIndex = availableMonths.indexOf(selectedMonth);
 
@@ -410,34 +409,6 @@ export function TimelineHeader({
         </div>
       </div>
 
-      {/* 3. PHASES COLUMN TRACK HEADERS (100% Mathematically Aligned & Visible on Export) */}
-      <div className="overflow-x-auto">
-        <div className="min-w-[960px] grid grid-cols-[220px_1fr_130px] items-center gap-2 pb-2 pt-1 border-b border-gray-200">
-          {/* Left Column Label */}
-          <div className="text-xs font-bold text-[#5A646E] pl-2 uppercase tracking-wide">
-            Product & Channel
-          </div>
-
-          {/* Middle 7 Phases Column Badges */}
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {phases.map((phase) => (
-              <div
-                key={phase.key}
-                className={`text-[10px] md:text-[11px] font-bold py-1 px-1 rounded-md shadow-2xs whitespace-pre-line leading-tight flex items-center justify-center min-h-[36px] ${phase.badgeBg} ${phase.badgeTextColor}`}
-              >
-                {phase.label}
-              </div>
-            ))}
-          </div>
-
-          {/* Right Column Label - Most Important */}
-          <div className="text-xs md:text-sm font-black text-white pr-2 text-center uppercase tracking-wider bg-[#ED1C24] rounded-md py-2 px-2 shadow-sm flex items-center justify-center gap-1.5">
-            <Target className="w-4 h-4 shrink-0" />
-            <span>Target Launch</span>
-          </div>
-        </div>
-      </div>
-
       {/* Add New Month Modal (Simple Dialog) */}
       {isAddingMonthModal && (
         <div className="export-hide fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -474,6 +445,42 @@ export function TimelineHeader({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface TimelineTrackHeaderProps {
+  timelineType: TimelineType;
+}
+
+export function TimelineTrackHeader({ timelineType }: TimelineTrackHeaderProps) {
+  const isEnhancement = timelineType === "enhancement";
+  const phases = isEnhancement ? ENHANCEMENT_PHASES : PRODUCT_PHASES;
+
+  return (
+    <div className="min-w-[960px] grid grid-cols-[220px_1fr_130px] items-center gap-2 pb-2 pt-1 border-b border-gray-200">
+      {/* Left Column Label */}
+      <div className="text-xs font-bold text-[#5A646E] pl-2 uppercase tracking-wide">
+        Product & Channel
+      </div>
+
+      {/* Middle 7 Phases Column Badges */}
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {phases.map((phase) => (
+          <div
+            key={phase.key}
+            className={`text-[10px] md:text-[11px] font-bold py-1 px-1 rounded-md shadow-2xs whitespace-pre-line leading-tight flex items-center justify-center min-h-[36px] ${phase.badgeBg} ${phase.badgeTextColor}`}
+          >
+            {phase.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Right Column Label - Target Launch */}
+      <div className="text-xs md:text-sm font-black text-white pr-2 text-center uppercase tracking-wider bg-[#ED1C24] rounded-md py-2 px-2 shadow-sm flex items-center justify-center gap-1.5">
+        <Target className="w-4 h-4 shrink-0" />
+        <span>Target Launch</span>
+      </div>
     </div>
   );
 }
