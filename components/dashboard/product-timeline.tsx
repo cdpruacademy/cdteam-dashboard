@@ -154,7 +154,6 @@ export function ProductTimeline() {
           onMonthChange={setSelectedMonth}
           availableMonths={availableMonths}
           onAddNewMonth={addNewMonth}
-          onCopyFromPreviousMonth={copyFromPreviousMonth}
           asOfText={asOfText}
           onAsOfChange={setAsOfText}
           onAddClick={handleOpenAdd}

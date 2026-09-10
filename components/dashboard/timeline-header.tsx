@@ -20,9 +20,7 @@ import {
   Palette,
   ChevronLeft,
   ChevronRight,
-  Copy,
   Clock,
-  History,
 } from "lucide-react";
 import { CloudStatusBadge } from "./cloud-status-badge";
 
@@ -33,7 +31,6 @@ interface TimelineHeaderProps {
   onMonthChange: (month: string) => void;
   availableMonths?: string[];
   onAddNewMonth?: (month: string) => void;
-  onCopyFromPreviousMonth?: () => void;
   asOfText: string;
   onAsOfChange: (asOf: string) => void;
   onAddClick: () => void;
@@ -55,7 +52,6 @@ export function TimelineHeader({
   onMonthChange,
   availableMonths = AVAILABLE_MONTHS,
   onAddNewMonth,
-  onCopyFromPreviousMonth,
   asOfText,
   onAsOfChange,
   onAddClick,
@@ -141,18 +137,11 @@ export function TimelineHeader({
             </button>
           </div>
 
-          {/* Quick Clone from Previous Month (Admin Only) */}
-          {isAdmin && onCopyFromPreviousMonth && currentIndex > 0 && (
-            <button
-              type="button"
-              onClick={onCopyFromPreviousMonth}
-              title={`คัดลอกรายการจากเดือน ${availableMonths[currentIndex - 1]}`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
-            >
-              <Copy className="w-3.5 h-3.5 text-blue-600" />
-              <span>คัดลอกข้อมูลจาก {availableMonths[currentIndex - 1]}</span>
-            </button>
-          )}
+          {/* Cloud Status Badge (status indicator) */}
+          <CloudStatusBadge
+            isCloudConnected={isCloudConnected}
+            isSyncing={isSyncing}
+          />
         </div>
 
         {/* Row B: Month Selector Navigation Pills */}
@@ -256,7 +245,7 @@ export function TimelineHeader({
       </div>
 
       {/* 2. MAIN TITLE BAR: Visible on Export & Normal */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 pt-1">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 pt-0">
         {/* Left: Calendar Badge + Month Title & As-Of Date */}
         <div className="flex items-center gap-3.5">
           <div
@@ -271,12 +260,7 @@ export function TimelineHeader({
               <span className="text-2xl md:text-3xl font-black tracking-tight text-[#2D2D2D] leading-none">
                 {selectedMonth}
               </span>
-              {selectedMonth !== "AUG 2026" && (
-                <span className="export-hide text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1">
-                  <History className="w-3 h-3 text-slate-500" />
-                  <span>ข้อมูลประวัติ / แผนรอบเดือน</span>
-                </span>
-              )}
+
             </div>
 
             {/* Editable As Of Text */}
@@ -328,9 +312,9 @@ export function TimelineHeader({
         </div>
 
         {/* Right Area: Big Title (Stays on export) + Action Buttons (Hidden on Export) */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 ml-auto">
           {/* Big Presentation Title (Clean on Export) */}
-          <div className="text-right mr-1">
+          <div className="text-right">
             <span
               className={`text-xl md:text-2xl font-black tracking-tight ${
                 isEnhancement ? "text-[#0066CC]" : "text-[#ED1C24]"
@@ -345,11 +329,6 @@ export function TimelineHeader({
 
           {/* ALL ACTION BUTTONS (COMPLETELY HIDDEN ON EXPORT) */}
           <div className="export-hide flex items-center gap-1.5 sm:gap-2">
-            {/* Cloud Status Badge */}
-            <CloudStatusBadge
-              isCloudConnected={isCloudConnected}
-              isSyncing={isSyncing}
-            />
 
             {/* Color Customizer Button (Admin only) */}
             {isAdmin && (
@@ -449,9 +428,9 @@ export function TimelineHeader({
             ))}
           </div>
 
-          {/* Right Column Label */}
-          <div className="text-xs font-bold text-[#5A646E] pr-2 text-right uppercase tracking-wide">
-            Target Launch
+          {/* Right Column Label - Most Important */}
+          <div className="text-xs md:text-sm font-black text-white pr-2 text-center uppercase tracking-wider bg-[#ED1C24] rounded-md py-2 px-2 shadow-sm">
+            🎯 Target Launch
           </div>
         </div>
       </div>
