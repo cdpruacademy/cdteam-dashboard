@@ -1,0 +1,614 @@
+﻿"use client";
+
+import * as React from "react";
+import { useState, useEffect } from "react";
+import {
+  ProductItem,
+  PHASES,
+  PhaseKey,
+  MilestoneStatus,
+  TimelineType,
+} from "@/lib/timeline-data";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ElearningMonitorIcon } from "./elearning-icon";
+import {
+  X,
+  Trash2,
+  CheckCircle2,
+  Calendar,
+  Layers,
+  User,
+  Clock,
+  Sparkles,
+  AlertTriangle,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+
+interface ProductFormModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  timelineType?: TimelineType;
+  selectedMonth?: string;
+  productToEdit?: ProductItem | null;
+  onSave: (product: Omit<ProductItem, "id">, id?: string) => void;
+  onDelete?: (id: string) => void;
+}
+
+const BROKER_OPTIONS = [
+  { value: "ttb", label: "ttb", color: "#009FE3" },
+  { value: "ttb touch", label: "ttb touch", color: "#009FE3" },
+  { value: "UOB", label: "UOB", color: "#0B2265" },
+  { value: "Agency", label: "Agency (Prudential)", color: "#ED1C24" },
+  { value: "Audit", label: "Audit", color: "#1E293B" },
+  { value: "New Broker", label: "New Broker", color: "#334155" },
+  { value: "Other", label: "อื่นๆ (ระบุเอง)", color: "#64748B" },
+];
+
+export function ProductFormModal({
+  isOpen,
+  onClose,
+  timelineType = "product",
+  selectedMonth = "AUG 2026",
+  productToEdit,
+  onSave,
+  onDelete,
+}: ProductFormModalProps) {
+  const isEnhancement = timelineType === "enhancement";
+
+  const [broker, setBroker] = useState<string>(isEnhancement ? "ttb" : "New Broker");
+  const [customBroker, setCustomBroker] = useState<string>("");
+  const [name, setName] = useState<string>("");
+  const [owner, setOwner] = useState<string>("");
+  const [internalDate, setInternalDate] = useState<string>("TBC");
+  const [commercialDate, setCommercialDate] = useState<string>("TBC");
+  const [csDate, setCsDate] = useState<string>("");
+  const [customRightLabel, setCustomRightLabel] = useState<string>("");
+
+  interface MilestoneFormState {
+    enabled: boolean;
+    date: string;
+    status: MilestoneStatus;
+    isElearningIcon: boolean;
+  }
+
+  const [milestonesState, setMilestonesState] = useState<Record<PhaseKey, MilestoneFormState>>({
+    "kick-off": { enabled: true, date: "", status: "completed", isElearningIcon: false },
+    "first-draft": { enabled: true, date: "", status: "completed", isElearningIcon: false },
+    "first-draft-elearning": { enabled: false, date: "", status: "pending", isElearningIcon: false },
+    "final-approval": { enabled: true, date: "", status: "completed", isElearningIcon: false },
+    "final-elearning": { enabled: false, date: "", status: "pending", isElearningIcon: false },
+    "internal-training": { enabled: false, date: "", status: "pending", isElearningIcon: false },
+    launch: { enabled: true, date: "", status: "completed", isElearningIcon: true },
+  });
+
+  const [errors, setErrors] = useState<{ name?: string; owner?: string }>({});
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (productToEdit) {
+      const knownBroker = BROKER_OPTIONS.find((b) => b.value === productToEdit.broker);
+      if (knownBroker) {
+        setBroker(productToEdit.broker);
+        setCustomBroker("");
+      } else {
+        setBroker("Other");
+        setCustomBroker(productToEdit.broker);
+      }
+      setName(productToEdit.name);
+      setOwner(productToEdit.owner);
+      setInternalDate(productToEdit.internalDate || "TBC");
+      setCommercialDate(productToEdit.commercialDate || "TBC");
+      setCsDate(productToEdit.csDate || "");
+      setCustomRightLabel(productToEdit.customRightLabel || "");
+
+      const nextMState: Record<PhaseKey, MilestoneFormState> = { ...milestonesState };
+      PHASES.forEach((p) => {
+        const existing = productToEdit.milestones[p.key];
+        if (existing) {
+          nextMState[p.key] = {
+            enabled: true,
+            date: existing.date || "",
+            status: existing.status || "completed",
+            isElearningIcon: !!existing.isElearningIcon,
+          };
+        } else {
+          nextMState[p.key] = {
+            enabled: false,
+            date: "",
+            status: "pending",
+            isElearningIcon: false,
+          };
+        }
+      });
+      setMilestonesState(nextMState);
+    } else {
+      setBroker(isEnhancement ? "ttb" : "New Broker");
+      setCustomBroker("");
+      setName("");
+      setOwner("");
+      setInternalDate("TBC");
+      setCommercialDate("TBC");
+      setCsDate("");
+      setCustomRightLabel("");
+      setMilestonesState({
+        "kick-off": { enabled: true, date: "", status: "completed", isElearningIcon: false },
+        "first-draft": { enabled: true, date: "", status: "completed", isElearningIcon: false },
+        "first-draft-elearning": { enabled: false, date: "", status: "pending", isElearningIcon: false },
+        "final-approval": { enabled: true, date: "", status: "completed", isElearningIcon: false },
+        "final-elearning": { enabled: false, date: "", status: "pending", isElearningIcon: false },
+        "internal-training": { enabled: false, date: "", status: "pending", isElearningIcon: false },
+        launch: { enabled: true, date: "", status: "completed", isElearningIcon: true },
+      });
+    }
+    setErrors({});
+    setIsConfirmingDelete(false);
+    setIsSubmitting(false);
+  }, [productToEdit, isOpen, isEnhancement]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: { name?: string; owner?: string } = {};
+    if (!name.trim()) newErrors.name = "กรุณาระบุชื่อรายการ";
+    if (!owner.trim()) newErrors.owner = "กรุณาระบุชื่อผู้รับผิดชอบ";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const builtMilestones: Partial<Record<PhaseKey, any>> = {};
+      PHASES.forEach((p) => {
+        const ms = milestonesState[p.key];
+        if (ms && ms.enabled) {
+          builtMilestones[p.key] = {
+            phase: p.key,
+            date: ms.date.trim() || undefined,
+            status: ms.status,
+            isElearningIcon: ms.isElearningIcon,
+          };
+        }
+      });
+
+      const finalBroker = broker === "Other" ? (customBroker.trim() || "Other") : broker;
+
+      const payload: Omit<ProductItem, "id"> = {
+        broker: finalBroker,
+        name: name.trim(),
+        owner: owner.trim(),
+        internalDate: internalDate.trim() || undefined,
+        commercialDate: commercialDate.trim() || undefined,
+        csDate: csDate.trim() || undefined,
+        customRightLabel: customRightLabel.trim() || undefined,
+        milestones: builtMilestones,
+        month: selectedMonth,
+      };
+
+      onSave(payload, productToEdit?.id);
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (productToEdit && onDelete) {
+      onDelete(productToEdit.id);
+      onClose();
+    }
+  };
+
+  const currentBrokerObj = BROKER_OPTIONS.find((b) => b.value === broker) || {
+    color: "#64748B",
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ duration: 0.2 }}
+        className="w-full max-w-3xl my-auto"
+      >
+        <Card className="border border-gray-200 shadow-2xl bg-white max-h-[92vh] flex flex-col">
+          {/* Header */}
+          <CardHeader className="pb-4 border-b border-gray-100 shrink-0 bg-gray-50/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  style={{ backgroundColor: isEnhancement ? "#0066CC" : "#ED1C24" }}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xs"
+                >
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg font-bold text-gray-900">
+                      {productToEdit ? "แก้ไขข้อมูลรายการ" : "เพิ่มรายการใหม่"}
+                    </CardTitle>
+                    <Badge variant={isEnhancement ? "secondary" : "default"}>
+                      {isEnhancement ? "Enhancement" : "New Product"}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs text-gray-600">
+                      {selectedMonth}
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs text-gray-500 mt-0.5">
+                    กรอกข้อมูลกำหนดการและ Milestone เพื่อแสดงผลบน Dashboard ของทีม
+                  </CardDescription>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </CardHeader>
+
+          {/* Form Content (Scrollable) */}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            {/* Section 1: Basic Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-700 tracking-wider uppercase">
+                <Layers className="w-3.5 h-3.5 text-red-500" />
+                <span>1. ข้อมูลพื้นฐาน (Basic Information)</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Product Name */}
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label required>ชื่อรายการ / โครงการ (Product Name)</Label>
+                  <Input
+                    placeholder="เช่น PRUWealth Max, Rider Cancer Plus"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    error={!!errors.name}
+                    clearable
+                    onClear={() => setName("")}
+                  />
+                  {errors.name && (
+                    <p className="text-xs text-red-500 font-medium">{errors.name}</p>
+                  )}
+                </div>
+
+                {/* Broker / Partner Select */}
+                <div className="space-y-1.5">
+                  <Label required>ช่องทาง / พาร์ทเนอร์ (Channel / Broker)</Label>
+                  <Select
+                    value={broker}
+                    onValueChange={(val) => {
+                      setBroker(val);
+                      if (val !== "Other") setCustomBroker("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: currentBrokerObj.color }}
+                        />
+                        <SelectValue placeholder="เลือกช่องทาง" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BROKER_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: opt.color }}
+                            />
+                            <span>{opt.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {broker === "Other" && (
+                    <div className="pt-2">
+                      <Input
+                        placeholder="พิมพ์ชื่อช่องทางใหม่..."
+                        value={customBroker}
+                        onChange={(e) => setCustomBroker(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Owner */}
+                <div className="space-y-1.5">
+                  <Label required>ผู้รับผิดชอบ (Project Owner)</Label>
+                  <Input
+                    leftIcon={<User className="w-4 h-4 text-gray-400" />}
+                    placeholder="เช่น Surakit P."
+                    value={owner}
+                    onChange={(e) => setOwner(e.target.value)}
+                    error={!!errors.owner}
+                    clearable
+                    onClear={() => setOwner("")}
+                  />
+                  {errors.owner && (
+                    <p className="text-xs text-red-500 font-medium">{errors.owner}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Section 2: Launch & Target Dates */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-700 tracking-wider uppercase">
+                <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                <span>2. กำหนดการเปิดตัว (Target Launch Dates)</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Internal Training Date</Label>
+                  <Input
+                    leftIcon={<Clock className="w-4 h-4 text-gray-400" />}
+                    placeholder="เช่น 10 Aug 2026 หรือ TBC"
+                    value={internalDate}
+                    onChange={(e) => setInternalDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Commercial Launch Date</Label>
+                  <Input
+                    leftIcon={<Clock className="w-4 h-4 text-green-600" />}
+                    placeholder="เช่น 1 Sep 2026 หรือ TBC"
+                    value={commercialDate}
+                    onChange={(e) => setCommercialDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label optional>CS Date (ถ้ามี)</Label>
+                  <Input
+                    placeholder="เช่น 18 Aug 2026"
+                    value={csDate}
+                    onChange={(e) => setCsDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label optional>ข้อความสถานะพิเศษทางขวา</Label>
+                  <Input
+                    placeholder="เช่น Sent out : Sep 2026"
+                    value={customRightLabel}
+                    onChange={(e) => setCustomRightLabel(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Section 3: Milestones & Progress */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-700 tracking-wider uppercase">
+                  <Clock className="w-3.5 h-3.5 text-green-600" />
+                  <span>3. กำหนดขั้นตอนความคืบหน้า (Phase Milestones)</span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  ติ๊กถูกหน้า Phase ที่ต้องการให้แสดงบนเส้น Timeline
+                </span>
+              </div>
+
+              <div className="space-y-2.5">
+                {PHASES.map((phase) => {
+                  const ms = milestonesState[phase.key];
+                  if (!ms) return null;
+
+                  return (
+                    <div
+                      key={phase.key}
+                      className={`p-3 rounded-xl border transition-all ${
+                        ms.enabled
+                          ? "bg-gray-50/80 border-gray-200"
+                          : "bg-white border-dashed border-gray-200 opacity-60"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        {/* Checkbox toggle */}
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={ms.enabled}
+                            onChange={(e) =>
+                              setMilestonesState((prev) => ({
+                                ...prev,
+                                [phase.key]: {
+                                  ...prev[phase.key],
+                                  enabled: e.target.checked,
+                                },
+                              }))
+                            }
+                            className="w-4 h-4 text-[#ED1C24] rounded border-gray-300 focus:ring-red-500"
+                          />
+                          <span className="text-xs font-bold text-gray-800">
+                            {phase.label.replace("\n", " ")}
+                          </span>
+                        </label>
+
+                        {/* Status & Settings when enabled */}
+                        {ms.enabled && (
+                          <div className="flex items-center gap-2">
+                            {/* Milestone Date */}
+                            <Input
+                              size="sm"
+                              placeholder="วันที่ เช่น 17 Jul"
+                              value={ms.date}
+                              onChange={(e) =>
+                                setMilestonesState((prev) => ({
+                                  ...prev,
+                                  [phase.key]: {
+                                    ...prev[phase.key],
+                                    date: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="w-28 text-xs"
+                            />
+
+                            {/* Status toggle button */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setMilestonesState((prev) => ({
+                                  ...prev,
+                                  [phase.key]: {
+                                    ...prev[phase.key],
+                                    status:
+                                      prev[phase.key].status === "completed"
+                                        ? "pending"
+                                        : "completed",
+                                  },
+                                }))
+                              }
+                              className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all ${
+                                ms.status === "completed"
+                                  ? "bg-green-50 text-green-700 border-green-200"
+                                  : "bg-gray-100 text-gray-600 border-gray-300"
+                              }`}
+                            >
+                              {ms.status === "completed" ? "✓ Completed" : "⏳ Pending"}
+                            </button>
+
+                            {/* E-learning Icon toggle */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setMilestonesState((prev) => ({
+                                  ...prev,
+                                  [phase.key]: {
+                                    ...prev[phase.key],
+                                    isElearningIcon: !prev[phase.key].isElearningIcon,
+                                  },
+                                }))
+                              }
+                              title="เปิด/ปิด ไอคอน E-learning Monitor"
+                              className={`p-1 rounded-lg border transition-all ${
+                                ms.isElearningIcon
+                                  ? "bg-blue-50 border-blue-300 text-blue-600"
+                                  : "bg-white border-gray-200 text-gray-400 hover:text-gray-600"
+                              }`}
+                            >
+                              <ElearningMonitorIcon
+                                color={isEnhancement ? "blue" : "red"}
+                                className="w-4 h-4"
+                              />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </form>
+
+          {/* Footer Actions */}
+          <CardFooter className="border-t border-gray-100 p-4 bg-gray-50/60 shrink-0 flex items-center justify-between">
+            <div>
+              {productToEdit && onDelete && (
+                <div>
+                  {isConfirmingDelete ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        ยืนยันการลบ?
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handleDelete}
+                        className="h-8 text-xs"
+                      >
+                        ยืนยัน
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setIsConfirmingDelete(false)}
+                        className="h-8 text-xs"
+                      >
+                        ยกเลิก
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsConfirmingDelete(true)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>ลบรายการนี้</span>
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="text-xs"
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                loading={isSubmitting}
+                size="sm"
+                className="bg-[#ED1C24] hover:bg-[#D4181F] text-white text-xs font-semibold gap-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{productToEdit ? "บันทึกการแก้ไข" : "เพิ่มรายการ"}</span>
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}

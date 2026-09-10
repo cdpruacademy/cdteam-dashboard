@@ -7,98 +7,155 @@ import {
   INITIAL_PRODUCTS,
   INITIAL_ENHANCEMENTS,
   AVAILABLE_MONTHS,
+  MonthlyStore,
+  INITIAL_MONTHLY_STORE,
+  DEFAULT_AS_OF_BY_MONTH,
 } from "@/lib/timeline-data";
 import { exportTimelineToExcel, exportTimelineToJSON } from "@/lib/excel-service";
 
-const PRODUCTS_STORAGE_KEY = "pru_dashboard_products_v2";
-const ENHANCEMENTS_STORAGE_KEY = "pru_dashboard_enhancements_v2";
-const CONFIG_STORAGE_KEY = "pru_timeline_config_v2";
+const MONTHLY_STORAGE_KEY = "pru_dashboard_monthly_v3";
+const AVAILABLE_MONTHS_KEY = "pru_available_months_v3";
+const ACTIVE_MONTH_KEY = "pru_active_month_v3";
 
 export function useProducts() {
   const [timelineType, setTimelineType] = useState<TimelineType>("product");
+  const [availableMonths, setAvailableMonths] = useState<string[]>(AVAILABLE_MONTHS);
   const [selectedMonth, setSelectedMonth] = useState<string>("AUG 2026");
-  const [asOfText, setAsOfText] = useState<string>("as of 31 Aug");
-
-  const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
-  const [enhancements, setEnhancements] = useState<ProductItem[]>(INITIAL_ENHANCEMENTS);
+  const [monthlyStore, setMonthlyStore] = useState<MonthlyStore>(INITIAL_MONTHLY_STORE);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Initialize from localStorage after mounting
+  // Initialize from localStorage after mounting + auto-migration
   useEffect(() => {
     try {
-      const storedProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-      if (storedProducts) {
-        const parsed = JSON.parse(storedProducts);
-        if (Array.isArray(parsed) && parsed.length > 0) setProducts(parsed);
+      // 1. Load available months
+      const storedMonths = localStorage.getItem(AVAILABLE_MONTHS_KEY);
+      if (storedMonths) {
+        const parsed = JSON.parse(storedMonths);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAvailableMonths(parsed);
+        }
       }
 
-      const storedEnhancements = localStorage.getItem(ENHANCEMENTS_STORAGE_KEY);
-      if (storedEnhancements) {
-        const parsed = JSON.parse(storedEnhancements);
-        if (Array.isArray(parsed) && parsed.length > 0) setEnhancements(parsed);
+      // 2. Load active month
+      const storedActiveMonth = localStorage.getItem(ACTIVE_MONTH_KEY);
+      if (storedActiveMonth && AVAILABLE_MONTHS.concat(JSON.parse(storedMonths || "[]")).includes(storedActiveMonth)) {
+        setSelectedMonth(storedActiveMonth);
       }
 
-      const storedConfig = localStorage.getItem(CONFIG_STORAGE_KEY);
-      if (storedConfig) {
-        const config = JSON.parse(storedConfig);
-        if (config.asOfText) setAsOfText(config.asOfText);
-        if (config.selectedMonth) setSelectedMonth(config.selectedMonth);
+      // 3. Load monthly store
+      const storedData = localStorage.getItem(MONTHLY_STORAGE_KEY);
+      if (storedData) {
+        const parsed: MonthlyStore = JSON.parse(storedData);
+        setMonthlyStore(parsed);
+      } else {
+        // Migration from legacy v2 storage if present
+        const legacyProducts = localStorage.getItem("pru_dashboard_products_v2");
+        const legacyEnhancements = localStorage.getItem("pru_dashboard_enhancements_v2");
+        const legacyConfig = localStorage.getItem("pru_timeline_config_v2");
+
+        const initial = { ...INITIAL_MONTHLY_STORE };
+        if (legacyProducts || legacyEnhancements) {
+          initial["AUG 2026"] = {
+            products: legacyProducts ? JSON.parse(legacyProducts) : INITIAL_PRODUCTS,
+            enhancements: legacyEnhancements ? JSON.parse(legacyEnhancements) : INITIAL_ENHANCEMENTS,
+            asOfText: legacyConfig ? JSON.parse(legacyConfig).asOfText || "as of 31 Aug" : "as of 31 Aug",
+          };
+        }
+        setMonthlyStore(initial);
+        localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(initial));
       }
     } catch (err) {
-      console.error("Failed to load timeline data from localStorage", err);
+      console.error("Failed to load monthly timeline data from localStorage", err);
     } finally {
       setIsLoaded(true);
     }
   }, []);
 
-  // Save changes
-  const saveProducts = useCallback((items: ProductItem[]) => {
-    setProducts(items);
+  // Save full monthly store helper
+  const saveStore = useCallback((updatedStore: MonthlyStore) => {
+    setMonthlyStore(updatedStore);
     try {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updatedStore));
     } catch (_) {}
   }, []);
 
-  const saveEnhancements = useCallback((items: ProductItem[]) => {
-    setEnhancements(items);
-    try {
-      localStorage.setItem(ENHANCEMENTS_STORAGE_KEY, JSON.stringify(items));
-    } catch (_) {}
-  }, []);
-
-  const saveConfig = useCallback((month: string, asOf: string) => {
-    try {
-      localStorage.setItem(
-        CONFIG_STORAGE_KEY,
-        JSON.stringify({ selectedMonth: month, asOfText: asOf })
-      );
-    } catch (_) {}
-  }, []);
-
-  const handleSetAsOfText = useCallback(
-    (newAsOf: string) => {
-      setAsOfText(newAsOf);
-      saveConfig(selectedMonth, newAsOf);
-    },
-    [selectedMonth, saveConfig]
-  );
-
+  // Switch active month
   const handleSetSelectedMonth = useCallback(
     (newMonth: string) => {
       setSelectedMonth(newMonth);
-      saveConfig(newMonth, asOfText);
+      try {
+        localStorage.setItem(ACTIVE_MONTH_KEY, newMonth);
+      } catch (_) {}
+
+      // If month doesn't exist in store yet, initialize it
+      setMonthlyStore((prev) => {
+        if (!prev[newMonth]) {
+          const defaultAsOf = DEFAULT_AS_OF_BY_MONTH[newMonth] || `as of 15 ${newMonth.split(" ")[0]}`;
+          const updated: MonthlyStore = {
+            ...prev,
+            [newMonth]: {
+              products: [],
+              enhancements: [],
+              asOfText: defaultAsOf,
+            },
+          };
+          try {
+            localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updated));
+          } catch (_) {}
+          return updated;
+        }
+        return prev;
+      });
     },
-    [asOfText, saveConfig]
+    []
+  );
+
+  // Active month data
+  const currentMonthData = useMemo(() => {
+    return (
+      monthlyStore[selectedMonth] || {
+        products: [],
+        enhancements: [],
+        asOfText: DEFAULT_AS_OF_BY_MONTH[selectedMonth] || "as of 15th",
+      }
+    );
+  }, [monthlyStore, selectedMonth]);
+
+  const asOfText = currentMonthData.asOfText;
+
+  // Change As Of text for current month
+  const handleSetAsOfText = useCallback(
+    (newAsOf: string) => {
+      setMonthlyStore((prev) => {
+        const monthObj = prev[selectedMonth] || {
+          products: [],
+          enhancements: [],
+          asOfText: newAsOf,
+        };
+        const updated: MonthlyStore = {
+          ...prev,
+          [selectedMonth]: {
+            ...monthObj,
+            asOfText: newAsOf,
+          },
+        };
+        try {
+          localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updated));
+        } catch (_) {}
+        return updated;
+      });
+    },
+    [selectedMonth]
   );
 
   // Current active list depending on timelineType
   const currentItems = useMemo(() => {
-    const list = timelineType === "product" ? products : enhancements;
-    // Filter by month if set, or return all if all belong to current cycle
-    return list;
-  }, [timelineType, products, enhancements]);
+    return timelineType === "product"
+      ? currentMonthData.products
+      : currentMonthData.enhancements;
+  }, [timelineType, currentMonthData]);
 
-  // CRUD for active timeline
+  // CRUD for active month
   const addProduct = useCallback(
     (item: Omit<ProductItem, "id">) => {
       const newId = `${timelineType === "product" ? "pru" : "enh"}-${Date.now()}`;
@@ -108,58 +165,211 @@ export function useProducts() {
         month: selectedMonth,
       };
 
-      if (timelineType === "product") {
-        saveProducts([...products, newItem]);
-      } else {
-        saveEnhancements([...enhancements, newItem]);
-      }
+      setMonthlyStore((prev) => {
+        const monthObj = prev[selectedMonth] || {
+          products: [],
+          enhancements: [],
+          asOfText: DEFAULT_AS_OF_BY_MONTH[selectedMonth] || "as of 15th",
+        };
+
+        const updatedMonth =
+          timelineType === "product"
+            ? { ...monthObj, products: [...monthObj.products, newItem] }
+            : { ...monthObj, enhancements: [...monthObj.enhancements, newItem] };
+
+        const updated: MonthlyStore = {
+          ...prev,
+          [selectedMonth]: updatedMonth,
+        };
+        try {
+          localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updated));
+        } catch (_) {}
+        return updated;
+      });
+
       return newItem;
     },
-    [timelineType, products, enhancements, selectedMonth, saveProducts, saveEnhancements]
+    [timelineType, selectedMonth]
   );
 
   const updateProduct = useCallback(
     (id: string, updates: Partial<ProductItem>) => {
-      if (timelineType === "product") {
-        const updated = products.map((p) => (p.id === id ? { ...p, ...updates } : p));
-        saveProducts(updated);
-      } else {
-        const updated = enhancements.map((p) => (p.id === id ? { ...p, ...updates } : p));
-        saveEnhancements(updated);
-      }
+      setMonthlyStore((prev) => {
+        const monthObj = prev[selectedMonth];
+        if (!monthObj) return prev;
+
+        const updatedMonth =
+          timelineType === "product"
+            ? {
+                ...monthObj,
+                products: monthObj.products.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+              }
+            : {
+                ...monthObj,
+                enhancements: monthObj.enhancements.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+              };
+
+        const updated: MonthlyStore = {
+          ...prev,
+          [selectedMonth]: updatedMonth,
+        };
+        try {
+          localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updated));
+        } catch (_) {}
+        return updated;
+      });
     },
-    [timelineType, products, enhancements, saveProducts, saveEnhancements]
+    [timelineType, selectedMonth]
   );
 
   const deleteProduct = useCallback(
     (id: string) => {
-      if (timelineType === "product") {
-        saveProducts(products.filter((p) => p.id !== id));
-      } else {
-        saveEnhancements(enhancements.filter((p) => p.id !== id));
-      }
+      setMonthlyStore((prev) => {
+        const monthObj = prev[selectedMonth];
+        if (!monthObj) return prev;
+
+        const updatedMonth =
+          timelineType === "product"
+            ? {
+                ...monthObj,
+                products: monthObj.products.filter((p) => p.id !== id),
+              }
+            : {
+                ...monthObj,
+                enhancements: monthObj.enhancements.filter((p) => p.id !== id),
+              };
+
+        const updated: MonthlyStore = {
+          ...prev,
+          [selectedMonth]: updatedMonth,
+        };
+        try {
+          localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updated));
+        } catch (_) {}
+        return updated;
+      });
     },
-    [timelineType, products, enhancements, saveProducts, saveEnhancements]
+    [timelineType, selectedMonth]
   );
 
   const resetToDefault = useCallback(() => {
-    if (timelineType === "product") {
-      saveProducts(INITIAL_PRODUCTS);
-    } else {
-      saveEnhancements(INITIAL_ENHANCEMENTS);
+    setMonthlyStore((prev) => {
+      const defaultMonthData = INITIAL_MONTHLY_STORE[selectedMonth] || {
+        products: INITIAL_PRODUCTS,
+        enhancements: INITIAL_ENHANCEMENTS,
+        asOfText: DEFAULT_AS_OF_BY_MONTH[selectedMonth] || "as of 31 Aug",
+      };
+
+      const updated: MonthlyStore = {
+        ...prev,
+        [selectedMonth]: defaultMonthData,
+      };
+      try {
+        localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+  }, [selectedMonth]);
+
+  // Clone from previous month (useful for admins starting a new month)
+  const copyFromPreviousMonth = useCallback(() => {
+    const currentIndex = availableMonths.indexOf(selectedMonth);
+    if (currentIndex <= 0) {
+      alert("ไม่มีข้อมูลรอบเดือนก่อนหน้าให้คัดลอก");
+      return;
     }
-  }, [timelineType, saveProducts, saveEnhancements]);
+
+    const prevMonthName = availableMonths[currentIndex - 1];
+    const prevMonthData = monthlyStore[prevMonthName];
+    if (!prevMonthData || (prevMonthData.products.length === 0 && prevMonthData.enhancements.length === 0)) {
+      alert(`ไม่พบข้อมูลในรอบเดือน ${prevMonthName}`);
+      return;
+    }
+
+    const confirmed = confirm(
+      `คุณต้องการคัดลอกรายการจากเดือน ${prevMonthName} มายัง ${selectedMonth} หรือไม่? (ข้อมูลเดิมใน ${selectedMonth} จะถูกแทนที่)`
+    );
+    if (!confirmed) return;
+
+    // Deep clone with new IDs
+    const clonedProducts: ProductItem[] = prevMonthData.products.map((p, idx) => ({
+      ...p,
+      id: `pru-${Date.now()}-${idx}`,
+      month: selectedMonth,
+    }));
+
+    const clonedEnhancements: ProductItem[] = prevMonthData.enhancements.map((e, idx) => ({
+      ...e,
+      id: `enh-${Date.now()}-${idx}`,
+      month: selectedMonth,
+    }));
+
+    setMonthlyStore((prev) => {
+      const updated: MonthlyStore = {
+        ...prev,
+        [selectedMonth]: {
+          products: clonedProducts,
+          enhancements: clonedEnhancements,
+          asOfText: DEFAULT_AS_OF_BY_MONTH[selectedMonth] || `as of 15 ${selectedMonth.split(" ")[0]}`,
+        },
+      };
+      try {
+        localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    alert(`คัดลอกข้อมูลจาก ${prevMonthName} มายัง ${selectedMonth} สำเร็จเรียบร้อย`);
+  }, [availableMonths, selectedMonth, monthlyStore]);
+
+  // Add a new month cycle
+  const addNewMonth = useCallback(
+    (monthName: string) => {
+      const clean = monthName.trim().toUpperCase();
+      if (!clean) return;
+      if (availableMonths.includes(clean)) {
+        alert("รอบเดือนนี้มีอยู่ในระบบแล้ว");
+        setSelectedMonth(clean);
+        return;
+      }
+
+      const updatedMonths = [...availableMonths, clean];
+      setAvailableMonths(updatedMonths);
+      try {
+        localStorage.setItem(AVAILABLE_MONTHS_KEY, JSON.stringify(updatedMonths));
+      } catch (_) {}
+
+      handleSetSelectedMonth(clean);
+    },
+    [availableMonths, handleSetSelectedMonth]
+  );
 
   // Bulk import
   const importItems = useCallback(
     (imported: ProductItem[]) => {
-      if (timelineType === "product") {
-        saveProducts(imported);
-      } else {
-        saveEnhancements(imported);
-      }
+      setMonthlyStore((prev) => {
+        const monthObj = prev[selectedMonth] || {
+          products: [],
+          enhancements: [],
+          asOfText: DEFAULT_AS_OF_BY_MONTH[selectedMonth] || "as of 15th",
+        };
+
+        const updatedMonth =
+          timelineType === "product"
+            ? { ...monthObj, products: imported }
+            : { ...monthObj, enhancements: imported };
+
+        const updated: MonthlyStore = {
+          ...prev,
+          [selectedMonth]: updatedMonth,
+        };
+        try {
+          localStorage.setItem(MONTHLY_STORAGE_KEY, JSON.stringify(updated));
+        } catch (_) {}
+        return updated;
+      });
     },
-    [timelineType, saveProducts, saveEnhancements]
+    [timelineType, selectedMonth]
   );
 
   // Excel & JSON export
@@ -178,7 +388,9 @@ export function useProducts() {
     setTimelineType,
     selectedMonth,
     setSelectedMonth: handleSetSelectedMonth,
-    availableMonths: AVAILABLE_MONTHS,
+    availableMonths,
+    addNewMonth,
+    copyFromPreviousMonth,
     asOfText,
     setAsOfText: handleSetAsOfText,
     currentItems,
@@ -190,5 +402,7 @@ export function useProducts() {
     importItems,
     exportExcel,
     exportJSON,
+    monthlyStore,
   };
 }
+

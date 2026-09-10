@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
@@ -7,7 +7,7 @@ import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { ProductItem } from "@/lib/timeline-data";
 import { TimelineHeader } from "./timeline-header";
 import { TimelineRow } from "./timeline-row";
-import { ProductFormDrawer } from "./product-form-drawer";
+import { ProductFormModal } from "./product-form-modal";
 import { BrokerColorModal } from "./broker-color-modal";
 import { toPng } from "html-to-image";
 import { Plus, AlertCircle } from "lucide-react";
@@ -29,6 +29,9 @@ export function ProductTimeline() {
     setTimelineType,
     selectedMonth,
     setSelectedMonth,
+    availableMonths,
+    addNewMonth,
+    copyFromPreviousMonth,
     asOfText,
     setAsOfText,
     currentItems,
@@ -43,7 +46,7 @@ export function ProductTimeline() {
 
   const { isAdmin } = useAdminAuth();
 
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isColorModalOpen, setIsColorModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<ProductItem | null>(null);
   const [isExportingAll, setIsExportingAll] = useState(false);
@@ -79,12 +82,12 @@ export function ProductTimeline() {
 
   const handleOpenAdd = () => {
     setProductToEdit(null);
-    setIsDrawerOpen(true);
+    setIsModalOpen(true);
   };
 
   const handleOpenEdit = (item: ProductItem) => {
     setProductToEdit(item);
-    setIsDrawerOpen(true);
+    setIsModalOpen(true);
   };
 
   const handleSaveProduct = (data: Omit<ProductItem, "id">, id?: string) => {
@@ -95,11 +98,12 @@ export function ProductTimeline() {
     }
   };
 
+  // Clean Image Export (Completely Filters Out All Buttons)
   const handleExportAll = async () => {
     if (!dashboardRef.current) return;
     try {
       setIsExportingAll(true);
-      await new Promise((resolve) => setTimeout(resolve, 80));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const dataUrl = await toPng(dashboardRef.current, {
         cacheBust: true,
@@ -145,6 +149,9 @@ export function ProductTimeline() {
           onTimelineTypeChange={setTimelineType}
           selectedMonth={selectedMonth}
           onMonthChange={setSelectedMonth}
+          availableMonths={availableMonths}
+          onAddNewMonth={addNewMonth}
+          onCopyFromPreviousMonth={copyFromPreviousMonth}
           asOfText={asOfText}
           onAsOfChange={setAsOfText}
           onAddClick={handleOpenAdd}
@@ -168,21 +175,21 @@ export function ProductTimeline() {
                   {timelineType === "product"
                     ? "New Product Timeline"
                     : "Enhancement Timeline"}{" "}
-                  ({selectedMonth})
+                  รอบเดือน ({selectedMonth})
                 </h3>
                 <p className="text-xs text-gray-500 mt-1 mb-4">
                   {isAdmin
-                    ? "กดปุ่มด้านล่างเพื่อเพิ่มข้อมูล"
+                    ? "กดปุ่มด้านล่างเพื่อเริ่มเพิ่มข้อมูล หรือกดคัดลอกจากเดือนก่อนหน้า"
                     : "เข้าสู่โหมด Admin เพื่อเพิ่มข้อมูลในรอบเดือนนี้"}
                 </p>
                 {isAdmin ? (
                   <button
                     type="button"
                     onClick={handleOpenAdd}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[#ED1C24] text-white"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[#ED1C24] text-white hover:bg-[#D4181F] transition-all shadow-xs"
                   >
                     <Plus className="w-4 h-4" />
-                    เพิ่มข้อมูล
+                    เพิ่มข้อมูลรอบนี้
                   </button>
                 ) : null}
               </div>
@@ -203,21 +210,22 @@ export function ProductTimeline() {
         </div>
 
         {/* Clean Footer (without tips) */}
-        <div className="export-hide mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
-          <div>
+        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+          <div className="export-hide">
             {isAdmin ? "🔒 สิทธิ์ Admin: เปิดใช้งาน" : "โหมดผู้ชม (Read-only)"}
           </div>
-          <div>
+          <div className="font-medium text-gray-500">
             Prudential Thailand • ฝ่ายพัฒนาหลักสูตร
           </div>
         </div>
       </div>
 
-      {/* Drawer for Add/Edit */}
-      <ProductFormDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
+      {/* Redesigned Centered Shadcn Modal for Add/Edit */}
+      <ProductFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         timelineType={timelineType}
+        selectedMonth={selectedMonth}
         productToEdit={productToEdit}
         onSave={handleSaveProduct}
         onDelete={deleteProduct}

@@ -402,3 +402,56 @@ export const AVAILABLE_MONTHS = [
   "NOV 2026",
   "DEC 2026",
 ];
+
+export interface MonthTimelineData {
+  products: ProductItem[];
+  enhancements: ProductItem[];
+  asOfText: string;
+}
+
+export type MonthlyStore = Record<string, MonthTimelineData>;
+
+export const DEFAULT_AS_OF_BY_MONTH: Record<string, string> = {
+  "JUN 2026": "as of 30 Jun",
+  "JUL 2026": "as of 31 Jul",
+  "AUG 2026": "as of 31 Aug",
+  "SEP 2026": "as of 15 Sep",
+  "OCT 2026": "as of 15 Oct",
+  "NOV 2026": "as of 15 Nov",
+  "DEC 2026": "as of 15 Dec",
+};
+
+export const INITIAL_MONTHLY_STORE: MonthlyStore = {
+  "AUG 2026": {
+    products: INITIAL_PRODUCTS,
+    enhancements: INITIAL_ENHANCEMENTS,
+    asOfText: "as of 31 Aug",
+  },
+  "JUL 2026": {
+    products: INITIAL_PRODUCTS.slice(0, 4).map((p, idx) => ({
+      ...p,
+      id: `jul-${p.id}`,
+      month: "JUL 2026",
+      internalDate: idx === 0 ? "10 Jul 2026" : p.internalDate,
+    })),
+    enhancements: INITIAL_ENHANCEMENTS.slice(0, 4).map((e) => ({
+      ...e,
+      id: `jul-${e.id}`,
+      month: "JUL 2026",
+    })),
+    asOfText: "as of 31 Jul",
+  },
+  "SEP 2026": {
+    products: INITIAL_PRODUCTS.map((p) => ({
+      ...p,
+      id: `sep-${p.id}`,
+      month: "SEP 2026",
+    })),
+    enhancements: INITIAL_ENHANCEMENTS.map((e) => ({
+      ...e,
+      id: `sep-${e.id}`,
+      month: "SEP 2026",
+    })),
+    asOfText: "as of 15 Sep",
+  },
+};
