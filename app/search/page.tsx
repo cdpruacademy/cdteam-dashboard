@@ -1,4 +1,5 @@
-import { KnowledgeSearch } from "@/components/search/search-results";
+import { redirect } from "next/navigation";
+// import { KnowledgeSearch } from "@/components/search/search-results";
 
 export const metadata = {
   title: "คลังคำถามและคู่มือ | Prudential Thailand",
@@ -6,9 +7,8 @@ export const metadata = {
 };
 
 export default function SearchPage() {
-  return (
-    <div className="min-h-screen py-4">
-      <KnowledgeSearch />
-    </div>
-  );
+  // ปิดการเข้าถึงหน้าคลังคำถามชั่วคราวเพื่อความปลอดภัยของข้อมูล
+  redirect("/");
+  return null;
 }
+

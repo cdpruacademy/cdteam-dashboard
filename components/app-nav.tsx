@@ -56,7 +56,8 @@ export function AppNav() {
                 <span className="inline xs:hidden sm:hidden">Timeline</span>
               </Link>
 
-              <Link
+              {/* คลังคำถามและคู่มือ (ปิดการแสดงผลชั่วคราวตามนโยบายความปลอดภัยข้อมูล) */}
+              {/* <Link
                 href="/search"
                 className={`inline-flex items-center gap-1 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all ${
                   isSearch
@@ -67,7 +68,7 @@ export function AppNav() {
                 <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 <span className="hidden xs:inline sm:inline">คลังคำถาม (Search)</span>
                 <span className="inline xs:hidden sm:hidden">Search</span>
-              </Link>
+              </Link> */}
             </nav>
 
             {/* Admin Lock / Status */}

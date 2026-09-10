@@ -53,6 +53,7 @@ interface ProductFormModalProps {
   productToEdit?: ProductItem | null;
   onSave: (product: Omit<ProductItem, "id">, id?: string) => void;
   onDelete?: (id: string) => void;
+  teamMembers?: string[];
 }
 
 const BROKER_OPTIONS = [
@@ -65,12 +66,19 @@ const BROKER_OPTIONS = [
   { value: "Other", label: "อื่นๆ (ระบุเอง)", color: "#64748B" },
 ];
 
-const TEAM_OWNERS = [
-  { id: "Jirapat O.", label: "Jirapat O. (จิรภัทร)" },
-  { id: "Sakkarin S.", label: "Sakkarin S. (ศักรินทร์)" },
-  { id: "Nitikan B.", label: "Nitikan B. (นิติกานต์)" },
-  { id: "Surakit P.", label: "Surakit P. (สุรกิจ)" },
+const DEFAULT_MEMBERS = [
+  "Jirapat O.",
+  "Sakkarin S.",
+  "Nitikan B.",
+  "Surakit P.",
 ];
+
+const THAI_NAME_MAP: Record<string, string> = {
+  "Jirapat O.": "จิรภัทร",
+  "Sakkarin S.": "ศักรินทร์",
+  "Nitikan B.": "นิติกานต์",
+  "Surakit P.": "สุรกิจ",
+};
 
 export function ProductFormModal({
   isOpen,
@@ -80,8 +88,15 @@ export function ProductFormModal({
   productToEdit,
   onSave,
   onDelete,
+  teamMembers,
 }: ProductFormModalProps) {
   const isEnhancement = timelineType === "enhancement";
+
+  const effectiveMembers = teamMembers && teamMembers.length > 0 ? teamMembers : DEFAULT_MEMBERS;
+  const teamOwnersList = effectiveMembers.map((m) => ({
+    id: m,
+    label: THAI_NAME_MAP[m] ? `${m} (${THAI_NAME_MAP[m]})` : m,
+  }));
 
   const [broker, setBroker] = useState<string>(isEnhancement ? "ttb" : "New Broker");
   const [customBroker, setCustomBroker] = useState<string>("");
@@ -133,7 +148,7 @@ export function ProductFormModal({
       const leftoverCustom: string[] = [];
 
       splitOwners.forEach((own) => {
-        const found = TEAM_OWNERS.find(
+        const found = teamOwnersList.find(
           (t) => t.id.toLowerCase() === own.toLowerCase() || t.id.toLowerCase().includes(own.toLowerCase())
         );
         if (found) {
@@ -396,7 +411,7 @@ export function ProductFormModal({
                 <div className="md:col-span-2 space-y-2">
                   <Label required>ผู้รับผิดชอบ (Responsible Persons)</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-gray-50/80 rounded-xl border border-gray-200">
-                    {TEAM_OWNERS.map((t) => {
+                    {teamOwnersList.map((t) => {
                       const isChecked = selectedOwners.includes(t.id);
                       return (
                         <label
