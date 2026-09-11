@@ -11,7 +11,7 @@ import { ProductFormModal } from "./product-form-modal";
 import { BrokerColorModal } from "./broker-color-modal";
 import { useTeamMembers } from "@/hooks/use-team-members";
 import { toPng } from "html-to-image";
-import { uploadTimelineSnapshot } from "@/lib/supabase";
+import { uploadTimelineSnapshot, saveBothTimelineSnapshots } from "@/lib/supabase";
 import { Plus, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
 
 const BROKER_COLORS_KEY = "pru_broker_colors_map_v1";
@@ -156,11 +156,21 @@ export function ProductTimeline() {
   const handleSendToLine = async () => {
     if (!dashboardRef.current) return;
     setIsSendingLine(true);
+    const originalType = timelineType;
+
     try {
       const el = dashboardRef.current;
       const exportWidth = Math.max(el.scrollWidth, 1200);
 
-      const dataUrl = await toPng(el, {
+      // 1. Ensure we render & capture New Product Timeline
+      if (timelineType !== "product") {
+        setTimelineType("product");
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      const productDataUrl = await toPng(el, {
         cacheBust: true,
         pixelRatio: 2,
         backgroundColor: "#ffffff",
@@ -173,25 +183,51 @@ export function ProductTimeline() {
         },
       });
 
-      const uploadRes = await uploadTimelineSnapshot(
-        dataUrl,
+      // 2. Switch to render & capture Enhancement Timeline
+      setTimelineType("enhancement");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const enhancementDataUrl = await toPng(el, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        width: exportWidth,
+        filter: (node) => {
+          if (node.classList && node.classList.contains("export-hide")) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      // 3. Revert back to user's original tab
+      if (originalType !== "enhancement") {
+        setTimelineType(originalType);
+      }
+
+      // 4. Upload both to Supabase Storage (fixed monthly filenames with upsert)
+      const uploadRes = await saveBothTimelineSnapshots(
+        productDataUrl,
+        enhancementDataUrl,
         selectedMonth,
-        timelineType,
         asOfText
       );
 
-      if (!uploadRes.success || !uploadRes.publicUrl) {
+      if (!uploadRes.success) {
         throw new Error(uploadRes.error || "ไม่สามารถอัปโหลดภาพได้");
       }
 
       alert(
-        `✅ อัปเดตรูปไทม์ไลน์ขึ้น Cloud เรียบร้อยแล้ว!\n\n` +
-        `• รอบเดือน: ${selectedMonth} (${asOfText})\n` +
-        `• สมาชิกในกลุ่ม LINE สามารถพิมพ์ "CDครับ รูป" เพื่อดูภาพนี้ได้ทันที\n` +
-        `• และระบบจะใช้ภาพนี้ส่งสรุปทุกเช้าวันจันทร์ให้อัตโนมัติครับ`
+        `✅ อัปเดตรูปไทม์ไลน์ขึ้น Cloud สำเร็จครบทั้ง 2 ตาราง!\n\n` +
+        `• 🎯 New Product Timeline: บันทึกเรียบร้อย\n` +
+        `• ⚡ Enhancement Timeline: บันทึกเรียบร้อย\n` +
+        `• รอบเดือน: ${selectedMonth} (${asOfText})\n\n` +
+        `สมาชิกใน LINE สามารถพิมพ์ "CD รูป" เพื่อดูภาพทั้ง 2 ตารางได้ทันทีครับ`
       );
     } catch (err: any) {
-      console.error("Failed to upload/send timeline image to LINE", err);
+      console.error("Failed to upload/send timeline images to LINE", err);
+      // Ensure we restore view on error too
+      setTimelineType(originalType);
       alert("เกิดข้อผิดพลาดในการบันทึกรูปภาพ: " + (err?.message || err));
     } finally {
       setIsSendingLine(false);

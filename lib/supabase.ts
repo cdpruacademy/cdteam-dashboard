@@ -311,6 +311,99 @@ export async function uploadTimelineSnapshot(
   }
 }
 
+/**
+ * Upload both New Product and Enhancement snapshots to Supabase Storage
+ * and update timeline_store row id = 'latest_image' with both URLs.
+ * Uses overwrite/upsert with fixed filenames to avoid cluttering storage.
+ */
+export async function saveBothTimelineSnapshots(
+  productDataUrl: string,
+  enhancementDataUrl: string,
+  month: string,
+  asOfText: string
+): Promise<{ success: boolean; productUrl?: string; enhancementUrl?: string; error?: string }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, error: "ไม่ได้เชื่อมต่อ Supabase" };
+  }
+
+  try {
+    const toBytes = (dataUrl: string) => {
+      const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+      const byteChars = atob(base64Data);
+      const byteNums = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteNums[i] = byteChars.charCodeAt(i);
+      }
+      return new Uint8Array(byteNums);
+    };
+
+    const safeMonth = month.replace(/\s+/g, "_").toLowerCase();
+    const productFileName = `${safeMonth}_product.png`;
+    const enhancementFileName = `${safeMonth}_enhancement.png`;
+
+    // 1. Upload Product Image (overwrite)
+    const { error: prodErr } = await client.storage
+      .from("timeline-snapshots")
+      .upload(productFileName, toBytes(productDataUrl), {
+        contentType: "image/png",
+        upsert: true,
+      });
+    if (prodErr) throw new Error("ไม่สามารถอัปโหลด New Product: " + prodErr.message);
+
+    // 2. Upload Enhancement Image (overwrite)
+    const { error: enhErr } = await client.storage
+      .from("timeline-snapshots")
+      .upload(enhancementFileName, toBytes(enhancementDataUrl), {
+        contentType: "image/png",
+        upsert: true,
+      });
+    if (enhErr) throw new Error("ไม่สามารถอัปโหลด Enhancement: " + enhErr.message);
+
+    const { data: prodUrlData } = client.storage
+      .from("timeline-snapshots")
+      .getPublicUrl(productFileName);
+    const { data: enhUrlData } = client.storage
+      .from("timeline-snapshots")
+      .getPublicUrl(enhancementFileName);
+
+    const timestamp = Date.now();
+    const productUrl = `${prodUrlData.publicUrl}?t=${timestamp}`;
+    const enhancementUrl = `${enhUrlData.publicUrl}?t=${timestamp}`;
+
+    // Register into timeline_store with id = 'latest_image'
+    await client.from("timeline_store").upsert(
+      {
+        id: "latest_image",
+        active_month: month,
+        data: {
+          product_image_url: productUrl,
+          enhancement_image_url: enhancementUrl,
+          image_url: productUrl, // backward compatibility
+          month: month,
+          as_of_text: asOfText,
+          updated_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+        updated_by: "pru_admin",
+      },
+      { onConflict: "id" }
+    );
+
+    return {
+      success: true,
+      productUrl,
+      enhancementUrl,
+    };
+  } catch (err: any) {
+    console.error("Save both snapshots exception:", err);
+    return {
+      success: false,
+      error: err?.message || "เกิดข้อผิดพลาดในการบันทึกรูปภาพ",
+    };
+  }
+}
+
 export const SUPABASE_SQL_SETUP = `-- Copy & Paste this into Supabase SQL Editor and click 'Run':
 
 create table if not exists public.timeline_store (
