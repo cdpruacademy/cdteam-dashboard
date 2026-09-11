@@ -10,6 +10,7 @@ import {
   MonthlyStore,
   INITIAL_MONTHLY_STORE,
   DEFAULT_AS_OF_BY_MONTH,
+  getSystemCurrentMonth,
 } from "@/lib/timeline-data";
 import { exportTimelineToExcel, exportTimelineToJSON } from "@/lib/excel-service";
 import {
@@ -24,9 +25,10 @@ const AVAILABLE_MONTHS_KEY = "pru_available_months_v3";
 const ACTIVE_MONTH_KEY = "pru_active_month_v3";
 
 export function useProducts() {
+  const defaultCurrentMonth = getSystemCurrentMonth();
   const [timelineType, setTimelineType] = useState<TimelineType>("product");
   const [availableMonths, setAvailableMonths] = useState<string[]>(AVAILABLE_MONTHS);
-  const [selectedMonth, setSelectedMonth] = useState<string>("AUG 2026");
+  const [selectedMonth, setSelectedMonth] = useState<string>(defaultCurrentMonth);
   const [monthlyStore, setMonthlyStore] = useState<MonthlyStore>({});
   const [isLoaded, setIsLoaded] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
@@ -37,6 +39,7 @@ export function useProducts() {
     let isMounted = true;
 
     async function initializeFromCloud() {
+      const realMonth = getSystemCurrentMonth();
       // 1. Read locally cached active month and available months for immediate tab structure
       try {
         const storedMonths = localStorage.getItem(AVAILABLE_MONTHS_KEY);
@@ -48,8 +51,10 @@ export function useProducts() {
         }
 
         const storedActiveMonth = localStorage.getItem(ACTIVE_MONTH_KEY);
-        if (storedActiveMonth) {
+        if (storedActiveMonth && storedActiveMonth !== "AUG 2026") {
           setSelectedMonth(storedActiveMonth);
+        } else {
+          setSelectedMonth(realMonth);
         }
 
         // Check if we have cached cloud data in localStorage
@@ -76,8 +81,10 @@ export function useProducts() {
             if (cloudData.availableMonths && cloudData.availableMonths.length > 0) {
               setAvailableMonths(cloudData.availableMonths);
             }
-            if (cloudData.activeMonth) {
+            if (cloudData.activeMonth && cloudData.activeMonth !== "AUG 2026") {
               setSelectedMonth(cloudData.activeMonth);
+            } else {
+              setSelectedMonth(realMonth);
             }
             setIsCloudConnected(true);
 
@@ -103,7 +110,7 @@ export function useProducts() {
             saveTimelineToCloud({
               monthlyStore: emptyStore,
               availableMonths: AVAILABLE_MONTHS,
-              activeMonth: "AUG 2026",
+              activeMonth: realMonth,
             }).catch(() => {});
           }
         } catch (err) {

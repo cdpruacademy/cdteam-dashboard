@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { MonthlyStore } from "./timeline-data";
+import { MonthlyStore, getSystemCurrentMonth } from "./timeline-data";
 
 export interface SupabaseConfig {
   url: string;
@@ -176,7 +176,7 @@ export async function saveTimelineToCloud(
       id: "current",
       data: payload.monthlyStore,
       available_months: payload.availableMonths,
-      active_month: payload.activeMonth || "AUG 2026",
+      active_month: payload.activeMonth || getSystemCurrentMonth(),
       updated_at: new Date().toISOString(),
       updated_by: "pru_admin",
     };

@@ -7,6 +7,7 @@ import {
   PRODUCT_PHASES,
   ENHANCEMENT_PHASES,
   AVAILABLE_MONTHS,
+  getMonthStatus,
 } from "@/lib/timeline-data";
 import {
   Calendar,
@@ -169,10 +170,12 @@ export function TimelineHeader({
 
           {/* Scrollable Month Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-1 flex-1">
-            {availableMonths.map((m, idx) => {
+            {availableMonths.map((m) => {
               const isSelected = m === selectedMonth;
-              const isPast = idx < availableMonths.indexOf("AUG 2026");
-              const isFuture = idx > availableMonths.indexOf("AUG 2026");
+              const status = getMonthStatus(m);
+              const isCurrent = status === "current";
+              const isPast = status === "past";
+              const isFuture = status === "future";
 
               return (
                 <button
@@ -188,7 +191,7 @@ export function TimelineHeader({
                   }`}
                 >
                   <span>{m}</span>
-                  {m === "AUG 2026" && (
+                  {isCurrent && (
                     <span
                       className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
                         isSelected ? "bg-white/30 text-white" : "bg-red-100 text-red-600"
@@ -197,7 +200,7 @@ export function TimelineHeader({
                       ปัจจุบัน
                     </span>
                   )}
-                  {isPast && m !== "AUG 2026" && (
+                  {isPast && (
                     <span
                       className={`text-[9px] px-1 py-0.2 rounded font-normal ${
                         isSelected ? "bg-white/30 text-white" : "text-gray-400"
@@ -206,7 +209,7 @@ export function TimelineHeader({
                       ย้อนหลัง
                     </span>
                   )}
-                  {isFuture && m !== "AUG 2026" && (
+                  {isFuture && (
                     <span
                       className={`text-[9px] px-1 py-0.2 rounded font-normal ${
                         isSelected ? "bg-white/30 text-white" : "text-blue-500"

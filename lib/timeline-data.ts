@@ -395,6 +395,52 @@ export const INITIAL_ENHANCEMENTS: ProductItem[] = [
   },
 ];
 
+export const MONTH_NAMES = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+
+export function getSystemCurrentMonth(): string {
+  const now = new Date();
+  const month = MONTH_NAMES[now.getMonth()];
+  const year = now.getFullYear();
+  return `${month} ${year}`;
+}
+
+export function parseMonthYear(monthStr: string): { monthIndex: number; year: number } | null {
+  if (!monthStr) return null;
+  const parts = monthStr.trim().split(/\s+/);
+  if (parts.length !== 2) return null;
+  const monthIdx = MONTH_NAMES.indexOf(parts[0].toUpperCase());
+  const year = parseInt(parts[1], 10);
+  if (monthIdx === -1 || isNaN(year)) return null;
+  return { monthIndex: monthIdx, year };
+}
+
+export function getMonthStatus(monthStr: string): "current" | "past" | "future" {
+  const parsed = parseMonthYear(monthStr);
+  if (!parsed) return "future";
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIdx = now.getMonth();
+
+  if (parsed.year < currentYear) return "past";
+  if (parsed.year > currentYear) return "future";
+  if (parsed.monthIndex < currentMonthIdx) return "past";
+  if (parsed.monthIndex > currentMonthIdx) return "future";
+  return "current";
+}
+
 export const AVAILABLE_MONTHS = [
   "JUN 2026",
   "JUL 2026",
