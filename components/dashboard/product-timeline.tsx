@@ -11,6 +11,7 @@ import { ProductFormModal } from "./product-form-modal";
 import { BrokerColorModal } from "./broker-color-modal";
 import { useTeamMembers } from "@/hooks/use-team-members";
 import { toPng } from "html-to-image";
+import { uploadTimelineSnapshot } from "@/lib/supabase";
 import { Plus, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
 
 const BROKER_COLORS_KEY = "pru_broker_colors_map_v1";
@@ -61,6 +62,7 @@ export function ProductTimeline() {
   const [isColorModalOpen, setIsColorModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<ProductItem | null>(null);
   const [isExportingAll, setIsExportingAll] = useState(false);
+  const [isSendingLine, setIsSendingLine] = useState(false);
 
   // Broker Colors State
   const [colorMap, setColorMap] = useState<Record<string, string>>(DEFAULT_COLORS);
@@ -147,6 +149,47 @@ export function ProductTimeline() {
     }
   };
 
+  const handleSendToLine = async () => {
+    if (!dashboardRef.current) return;
+    setIsSendingLine(true);
+    try {
+      const dataUrl = await toPng(dashboardRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        filter: (node) => {
+          if (node.classList && node.classList.contains("export-hide")) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      const uploadRes = await uploadTimelineSnapshot(
+        dataUrl,
+        selectedMonth,
+        timelineType,
+        asOfText
+      );
+
+      if (!uploadRes.success || !uploadRes.publicUrl) {
+        throw new Error(uploadRes.error || "ไม่สามารถอัปโหลดภาพได้");
+      }
+
+      alert(
+        `✅ อัปเดตรูปไทม์ไลน์ขึ้น Cloud เรียบร้อยแล้ว!\n\n` +
+        `• รอบเดือน: ${selectedMonth} (${asOfText})\n` +
+        `• สมาชิกในกลุ่ม LINE สามารถพิมพ์ "CDครับ รูป" เพื่อดูภาพนี้ได้ทันที\n` +
+        `• และระบบจะใช้ภาพนี้ส่งสรุปทุกเช้าวันจันทร์ให้อัตโนมัติครับ`
+      );
+    } catch (err: any) {
+      console.error("Failed to upload/send timeline image to LINE", err);
+      alert("เกิดข้อผิดพลาดในการบันทึกรูปภาพ: " + (err?.message || err));
+    } finally {
+      setIsSendingLine(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-[1440px] mx-auto py-2 sm:py-4 px-2 sm:px-6">
       {/* Main Container Card */}
@@ -170,6 +213,8 @@ export function ProductTimeline() {
           onExportJSON={exportJSON}
           onOpenColorModal={() => setIsColorModalOpen(true)}
           onResetClick={resetToDefault}
+          onSendLineClick={handleSendToLine}
+          isSendingLine={isSendingLine}
           isExporting={isExportingAll}
           isAdmin={isAdmin}
           isCloudConnected={isCloudConnected}

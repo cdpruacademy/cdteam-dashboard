@@ -239,6 +239,78 @@ export function subscribeToTimelineCloud(
   }
 }
 
+/**
+ * Upload high-res timeline snapshot to Supabase Storage and register as latest_image
+ */
+export async function uploadTimelineSnapshot(
+  dataUrl: string,
+  month: string,
+  timelineType: string,
+  asOfText: string
+): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, error: "ไม่ได้เชื่อมต่อ Supabase" };
+  }
+
+  try {
+    const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+
+    const safeMonth = month.replace(/\s+/g, "_").toLowerCase();
+    const fileName = `${safeMonth}_${timelineType}_snapshot.png`;
+
+    const { error: uploadError } = await client.storage
+      .from("timeline-snapshots")
+      .upload(fileName, byteArray, {
+        contentType: "image/png",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return { success: false, error: uploadError.message };
+    }
+
+    const { data: publicUrlData } = client.storage
+      .from("timeline-snapshots")
+      .getPublicUrl(fileName);
+
+    const publicUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+
+    // Register into timeline_store with id = 'latest_image'
+    await client.from("timeline_store").upsert(
+      {
+        id: "latest_image",
+        active_month: month,
+        data: {
+          image_url: publicUrl,
+          file_name: fileName,
+          timeline_type: timelineType,
+          as_of_text: asOfText,
+          updated_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+        updated_by: "pru_admin",
+      },
+      { onConflict: "id" }
+    );
+
+    return { success: true, publicUrl };
+  } catch (err: any) {
+    console.error("Snapshot upload exception:", err);
+    return {
+      success: false,
+      error: err?.message || "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ",
+    };
+  }
+}
+
 export const SUPABASE_SQL_SETUP = `-- Copy & Paste this into Supabase SQL Editor and click 'Run':
 
 create table if not exists public.timeline_store (

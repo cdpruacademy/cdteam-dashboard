@@ -24,6 +24,8 @@ import {
   Clock,
   Target,
   BarChart3,
+  Send,
+  Loader2,
 } from "lucide-react";
 import { CloudStatusBadge } from "./cloud-status-badge";
 
@@ -42,6 +44,8 @@ interface TimelineHeaderProps {
   onExportJSON: () => void;
   onOpenColorModal: () => void;
   onResetClick: () => void;
+  onSendLineClick?: () => void;
+  isSendingLine?: boolean;
   isExporting?: boolean;
   isAdmin?: boolean;
   isCloudConnected?: boolean;
@@ -63,6 +67,8 @@ export function TimelineHeader({
   onExportJSON,
   onOpenColorModal,
   onResetClick,
+  onSendLineClick,
+  isSendingLine = false,
   isExporting = false,
   isAdmin = false,
   isCloudConnected = false,
@@ -393,6 +399,24 @@ export function TimelineHeader({
               <Download className="w-3.5 h-3.5 text-gray-700" />
               <span>{isExporting ? "กำลังสร้างรูป..." : "Export รูปภาพ"}</span>
             </button>
+
+            {/* Send to LINE Button */}
+            {onSendLineClick && (
+              <button
+                type="button"
+                onClick={onSendLineClick}
+                disabled={isSendingLine}
+                title="อัปเดตรูปไทม์ไลน์นี้ขึ้น Cloud และส่งเข้า LINE ให้ทันที"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg border border-[#06C755] bg-[#06C755]/10 text-[#05963F] hover:bg-[#06C755] hover:text-white shadow-2xs transition-all disabled:opacity-50"
+              >
+                {isSendingLine ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#06C755]" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                <span>{isSendingLine ? "กำลังส่งเข้า LINE..." : "ส่งรูปเข้า LINE"}</span>
+              </button>
+            )}
 
             {/* Add Product Button (Admin only) */}
             {isAdmin && (
