@@ -118,12 +118,16 @@ export function ProductTimeline() {
       setIsExportingAll(true);
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const dataUrl = await toPng(dashboardRef.current, {
+      const el = dashboardRef.current;
+      const exportWidth = Math.max(el.scrollWidth, 1200);
+
+      const dataUrl = await toPng(el, {
         cacheBust: true,
-        backgroundColor: "#FFFFFF",
         pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        width: exportWidth,
         filter: (node) => {
-          if (node instanceof HTMLElement && node.classList.contains("export-hide")) {
+          if (node.classList && node.classList.contains("export-hide")) {
             return false;
           }
           return true;
@@ -153,10 +157,14 @@ export function ProductTimeline() {
     if (!dashboardRef.current) return;
     setIsSendingLine(true);
     try {
-      const dataUrl = await toPng(dashboardRef.current, {
+      const el = dashboardRef.current;
+      const exportWidth = Math.max(el.scrollWidth, 1200);
+
+      const dataUrl = await toPng(el, {
         cacheBust: true,
         pixelRatio: 2,
         backgroundColor: "#ffffff",
+        width: exportWidth,
         filter: (node) => {
           if (node.classList && node.classList.contains("export-hide")) {
             return false;
@@ -245,8 +253,8 @@ export function ProductTimeline() {
                 </div>
               </div>
             ) : currentItems.length === 0 ? (
-              <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-xl my-4">
-                <AlertCircle className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl my-2">
+                <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-1.5" />
                 <h3 className="text-sm font-bold text-gray-700">
                   ยังไม่มีข้อมูลใน{" "}
                   {timelineType === "product"
@@ -254,7 +262,7 @@ export function ProductTimeline() {
                     : "Enhancement Timeline"}{" "}
                   รอบเดือน ({selectedMonth})
                 </h3>
-                <p className="text-xs text-gray-500 mt-1 mb-4">
+                <p className="text-xs text-gray-500 mt-0.5 mb-2">
                   {isAdmin
                     ? "กดปุ่มด้านล่างเพื่อเริ่มเพิ่มข้อมูล หรือกดคัดลอกจากเดือนก่อนหน้า"
                     : "เข้าสู่โหมด Admin เพื่อเพิ่มข้อมูลในรอบเดือนนี้"}
@@ -263,7 +271,7 @@ export function ProductTimeline() {
                   <button
                     type="button"
                     onClick={handleOpenAdd}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-[#ED1C24] text-white hover:bg-[#D4181F] transition-all shadow-xs"
+                    className="export-hide inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg bg-[#ED1C24] text-white hover:bg-[#D4181F] transition-all shadow-xs"
                   >
                     <Plus className="w-4 h-4" />
                     เพิ่มข้อมูลรอบนี้
